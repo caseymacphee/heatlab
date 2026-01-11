@@ -2,60 +2,46 @@
 //  ContentView.swift
 //  heatlab
 //
-//  Created by Casey MacPhee on 1/11/26.
+//  Main tab navigation for iOS app
 //
 
 import SwiftUI
 import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
-
+    @State private var selectedTab = 0
+    
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
+        TabView(selection: $selectedTab) {
+            NavigationStack {
+                DashboardView()
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
+            .tabItem {
+                Label("Home", systemImage: "flame.fill")
             }
-        } detail: {
-            Text("Select an item")
-        }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+            .tag(0)
+            
+            NavigationStack {
+                HistoryView()
             }
+            .tabItem {
+                Label("Sessions", systemImage: "list.bullet")
+            }
+            .tag(1)
+            
+            NavigationStack {
+                TrendsView()
+            }
+            .tabItem {
+                Label("Trends", systemImage: "chart.xyaxis.line")
+            }
+            .tag(2)
         }
+        .tint(.orange)
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+        .modelContainer(for: HeatSession.self, inMemory: true)
 }
