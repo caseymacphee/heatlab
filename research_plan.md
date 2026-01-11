@@ -16,6 +16,7 @@ Technical research plan for Heat Pulse - a hot yoga tracking app with Apple Watc
 | AI Summaries | Apple Intelligence Foundation Models |
 | Analytics | None for v1 |
 | Bug Monitoring | Apple built-in (Xcode Organizer, App Store Connect) |
+| Dev Tooling | Cursor + XcodeBuildMCP + Xcode CLI |
 
 ---
 
@@ -41,7 +42,127 @@ Technical research plan for Heat Pulse - a hot yoga tracking app with Apple Watc
 
 ---
 
-## 2. Watch + iOS App Architecture (Companion App)
+## 2. Development Tooling - Cursor + Xcode
+
+### Writing Code in Cursor
+
+You can write all Swift/SwiftUI code in Cursor and use Xcode's command-line tools for building and running. This provides a faster editing experience while still leveraging Apple's build system.
+
+### Prerequisites
+
+1. **Xcode installed** - Required for command-line tools, simulators, and SDKs (~25GB)
+2. **Command-line tools enabled**:
+   ```bash
+   xcode-select --install
+   ```
+
+### Xcode MCP Servers
+
+MCP (Model Context Protocol) servers let AI assistants interact with Xcode tooling directly:
+
+| MCP Server | Features | Best For |
+|------------|----------|----------|
+| **XcodeBuildMCP** | Build projects, manage simulators, handle bundle IDs | Pure CLI workflow, no Xcode IDE needed |
+| **XcodeMCP** | Controls Xcode via JXA, parses build logs for error locations | When you want Xcode IDE features accessible via MCP |
+
+**XcodeBuildMCP** (recommended): [github.com/cameroncooke/XcodeBuildMCP](https://github.com/cameroncooke/XcodeBuildMCP)
+
+### Essential Command-Line Tools
+
+```bash
+# List schemes in your project
+xcodebuild -list
+
+# Build for simulator
+xcodebuild -scheme HeatPulse -configuration Debug \
+  -destination 'platform=iOS Simulator,name=iPhone 16 Pro'
+
+# Build Watch app
+xcodebuild -scheme "HeatPulse Watch App" -configuration Debug \
+  -destination 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm)'
+
+# List available simulators
+xcrun simctl list devices available
+
+# Boot a simulator
+xcrun simctl boot "iPhone 16 Pro"
+
+# Install app on booted simulator
+xcrun simctl install booted /path/to/HeatPulse.app
+
+# Launch app
+xcrun simctl launch booted com.yourname.heatpulse
+
+# View simulator logs
+xcrun simctl spawn booted log stream --predicate 'subsystem == "com.yourname.heatpulse"'
+```
+
+### What Still Requires Xcode IDE
+
+| Task | Why Xcode IDE Needed |
+|------|---------------------|
+| Initial project creation | Creating .xcodeproj with correct structure |
+| Adding Watch target | Complex target dependencies |
+| Enabling HealthKit/CloudKit capabilities | Modifies entitlements and provisioning |
+| Code signing setup | Automatic signing is easiest in GUI |
+| Asset catalog editing | .xcassets are binary formats |
+| Debugging on physical device | Xcode handles device pairing |
+
+### Recommended Workflow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  ONE-TIME SETUP (Xcode IDE)                                 │
+│  • Create project with iOS + Watch targets                  │
+│  • Enable HealthKit, CloudKit capabilities                  │
+│  • Configure automatic signing                              │
+│  • Add app icons to asset catalog                           │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  DAILY DEVELOPMENT (Cursor + CLI/MCP)                       │
+│  • Write Swift/SwiftUI code in Cursor                       │
+│  • Build via xcodebuild or XcodeBuildMCP                    │
+│  • Run on simulator via xcrun simctl                        │
+│  • View errors in Cursor terminal                           │
+│  • Iterate quickly without Xcode overhead                   │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  TESTING & RELEASE (Xcode IDE)                              │
+│  • Debug on physical Apple Watch                            │
+│  • Profile with Instruments                                 │
+│  • Archive and upload to TestFlight                         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Setting Up XcodeBuildMCP in Cursor
+
+Add to your Cursor MCP settings (`.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "xcodebuild": {
+      "command": "npx",
+      "args": ["-y", "xcodebuildmcp@latest"]
+    }
+  }
+}
+```
+
+This gives the AI assistant access to:
+- `xcode_build` - Build schemes
+- `xcode_list_simulators` - Show available simulators
+- `xcode_boot_simulator` - Start a simulator
+- `xcode_install_app` - Install built app
+- `xcode_launch_app` - Run the app
+
+---
+
+## 3. Watch + iOS App Architecture (Companion App)
 
 ### Critical: Health Data Storage Rules
 
@@ -128,7 +249,7 @@ graph TB
 
 ---
 
-## 3. Serverless Architecture - Confirmed
+## 4. Serverless Architecture - Confirmed
 
 **No server deployment required.** Two Apple systems handle sync:
 
@@ -173,7 +294,7 @@ sequenceDiagram
 
 ---
 
-## 4. Bug Detection and Monitoring - Using Apple Built-in Tools
+## 5. Bug Detection and Monitoring - Using Apple Built-in Tools
 
 **Decision: Use Apple's built-in tools only for v1.** No third-party crash reporting.
 
@@ -211,7 +332,7 @@ flowchart LR
 
 ---
 
-## 5. On-Device AI for Summaries - Apple Intelligence
+## 6. On-Device AI for Summaries - Apple Intelligence
 
 **Decision: Use Apple Intelligence Foundation Models** for human-readable summaries, backed by computed statistics.
 
@@ -243,7 +364,7 @@ Most fitness apps show raw numbers. Heat Pulse translates those into human-reada
 
 ---
 
-## 6. Apple Developer Program Requirements
+## 7. Apple Developer Program Requirements
 
 ### Cost
 
@@ -265,7 +386,7 @@ Most fitness apps show raw numbers. Heat Pulse translates those into human-reada
 
 ---
 
-## 7. Learning Path Recommendation
+## 8. Learning Path Recommendation
 
 ### Phase 1: Swift Fundamentals (1-2 weeks)
 
@@ -311,7 +432,7 @@ Most fitness apps show raw numbers. Heat Pulse translates those into human-reada
 
 ---
 
-## 8. Technical Decisions - All Confirmed
+## 9. Technical Decisions - All Confirmed
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
@@ -325,7 +446,7 @@ Most fitness apps show raw numbers. Heat Pulse translates those into human-reada
 
 ---
 
-## 9. Next Steps
+## 10. Next Steps
 
 With research complete and decisions confirmed, the next phase is **implementation planning**:
 
@@ -349,4 +470,5 @@ With research complete and decisions confirmed, the next phase is **implementati
 | How do developers find bugs? | Xcode Organizer crash reports, App Store Connect metrics - automatic, not just user complaints |
 | What language? | Swift with SwiftUI for both platforms |
 | Social features later? | Architecture supports adding CloudKit public database for social in v2 |
+| Can I code in Cursor? | Yes - write code in Cursor, build via XcodeBuildMCP or xcodebuild CLI, use Xcode IDE for initial setup and device debugging |
 
