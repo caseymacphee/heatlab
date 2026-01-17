@@ -14,9 +14,15 @@ struct DashboardView: View {
     @EnvironmentObject var wcReceiver: WatchConnectivityReceiver
     @State private var sessions: [SessionWithStats] = []
     @State private var isLoading = true
-    @State private var overallStats: OverallStats?
+    @State private var weekComparison: PeriodComparison?
     
-    private let calculator = TrendCalculator()
+    private let analysisCalculator = AnalysisCalculator()
+    
+    /// Sessions from the last 7 days
+    private var recentSessions: [SessionWithStats] {
+        let sevenDaysAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        return sessions.filter { $0.session.startDate >= sevenDaysAgo }
+    }
     
     var body: some View {
         ScrollView {
@@ -45,58 +51,21 @@ struct DashboardView: View {
                 if isLoading {
                     ProgressView("Loading...")
                         .padding()
-                } else if let stats = overallStats, stats.totalSessions > 0 {
-                    // Overall Stats
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Your Progress")
-                            .font(.headline)
-                        
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                            DashboardStatCard(
-                                title: "Total Sessions",
-                                value: "\(stats.totalSessions)",
-                                icon: "checkmark.circle.fill",
-                                color: .green
-                            )
-                            DashboardStatCard(
-                                title: "Total Time",
-                                value: stats.formattedTotalDuration,
-                                icon: "clock.fill",
-                                color: .blue
-                            )
-                            if settings.showCaloriesInApp {
-                                DashboardStatCard(
-                                    title: "Calories Burned",
-                                    value: "\(Int(stats.totalCalories))",
-                                    icon: "flame.fill",
-                                    color: .orange
-                                )
-                            }
-                            DashboardStatCard(
-                                title: "Avg HR",
-                                value: "\(Int(stats.averageHR)) bpm",
-                                icon: "heart.fill",
-                                color: .red
-                            )
-                        }
-                    }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                } else if let comparison = weekComparison, comparison.current.sessionCount > 0 {
+                    // This Week Stats using ComparisonCard
+                    ComparisonCard(comparison: comparison, period: .week)
                     
-                    // Recent Session
-                    if let recent = sessions.first {
+                    // Recent Sessions (last 7 days)
+                    if !recentSessions.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Text("Recent Session")
-                                    .font(.headline)
-                                Spacer()
-                                Text(recent.session.startDate.formatted(date: .abbreviated, time: .omitted))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
+                            Text("Recent Sessions")
+                                .font(.headline)
                             
-                            SessionRowView(session: recent)
+                            VStack(spacing: 8) {
+                                ForEach(recentSessions) { session in
+                                    SessionRowView(session: session, useRelativeTime: true)
+                                }
+                            }
                         }
                         .padding()
                         .background(Color(.systemGray6))
@@ -122,22 +91,6 @@ struct DashboardView: View {
                     .background(Color(.systemGray6))
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
-                
-                // Quick tip
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Image(systemName: "lightbulb.fill")
-                            .foregroundStyle(.yellow)
-                        Text("Tip")
-                            .font(.headline)
-                    }
-                    Text("Track your heated yoga sessions to see how your body adapts over time.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .padding()
-                .background(Color.yellow.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
             }
             .padding()
         }
@@ -159,35 +112,11 @@ struct DashboardView: View {
         isLoading = true
         let repo = SessionRepository(modelContext: modelContext)
         sessions = (try? await repo.fetchSessionsWithStats()) ?? []
-        overallStats = calculator.calculateOverallStats(sessions: sessions)
+        
+        // Calculate week comparison using AnalysisCalculator
+        weekComparison = analysisCalculator.comparePeriods(sessions: sessions, period: .week)
+        
         isLoading = false
-    }
-}
-
-struct DashboardStatCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundStyle(color)
-                Spacer()
-            }
-            
-            Text(value)
-                .font(.title2.bold())
-            
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-        .background(color.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 

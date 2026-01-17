@@ -52,11 +52,17 @@ struct SettingsView: View {
                         typeConfig: typeConfig,
                         onToggleVisibility: { visible in
                             settings.setVisibility(id: typeConfig.id, visible: visible)
-                        },
-                        onDelete: typeConfig.canDelete ? {
-                            settings.softDeleteCustomType(id: typeConfig.id)
-                        } : nil
+                        }
                     )
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        if typeConfig.canDelete {
+                            Button(role: .destructive) {
+                                settings.softDeleteCustomType(id: typeConfig.id)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
                 }
                 
                 Button {
@@ -68,22 +74,7 @@ struct SettingsView: View {
             } header: {
                 Text("Session Types")
             } footer: {
-                Text("Toggle visibility to show/hide types on Apple Watch. Default types cannot be removed.")
-            }
-            
-            // Preview Section
-            Section("Preview") {
-                HStack {
-                    Text("Hot Yoga Room")
-                    Spacer()
-                    TemperatureBadge(temperature: 102, unit: settings.temperatureUnit)
-                }
-                
-                HStack {
-                    Text("Very Hot Room")
-                    Spacer()
-                    TemperatureBadge(temperature: 108, unit: settings.temperatureUnit)
-                }
+                Text("Toggle visibility to show/hide types on Apple Watch. Swipe left on custom types to delete.")
             }
             
             // About Section
@@ -137,14 +128,12 @@ struct SettingsView: View {
 private struct SessionTypeRow: View {
     let typeConfig: SessionTypeConfig
     let onToggleVisibility: (Bool) -> Void
-    let onDelete: (() -> Void)?
     
     @State private var isVisible: Bool
     
-    init(typeConfig: SessionTypeConfig, onToggleVisibility: @escaping (Bool) -> Void, onDelete: (() -> Void)?) {
+    init(typeConfig: SessionTypeConfig, onToggleVisibility: @escaping (Bool) -> Void) {
         self.typeConfig = typeConfig
         self.onToggleVisibility = onToggleVisibility
-        self.onDelete = onDelete
         self._isVisible = State(initialValue: typeConfig.isVisible)
     }
     
@@ -167,17 +156,6 @@ private struct SessionTypeRow: View {
                 .onChange(of: isVisible) { _, newValue in
                     onToggleVisibility(newValue)
                 }
-            
-            // Delete button (only for custom types)
-            if let onDelete {
-                Button(role: .destructive) {
-                    onDelete()
-                } label: {
-                    Image(systemName: "trash")
-                        .foregroundStyle(.red)
-                }
-                .buttonStyle(.plain)
-            }
         }
     }
 }

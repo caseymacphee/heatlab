@@ -87,8 +87,10 @@ struct SessionDetailView: View {
                 // Baseline Comparison
                 BaselineComparisonView(comparison: baselineEngine.compareToBaseline(session: session))
                 
-                // AI Summary Section
-                aiSummarySection
+                // AI Summary Section (only show when AI available or existing summary)
+                if SummaryGenerator.isAvailable || session.session.aiSummary != nil {
+                    aiSummarySection
+                }
                 
                 // Notes (if available)
                 if let notes = session.session.userNotes, !notes.isEmpty {
@@ -126,13 +128,16 @@ struct SessionDetailView: View {
                     Text("AI Summary")
                         .font(.headline)
                     Spacer()
-                    Button {
-                        generateSummary()
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.caption)
+                    // Only show refresh button if AI is available
+                    if SummaryGenerator.isAvailable {
+                        Button {
+                            generateSummary()
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.caption)
+                        }
+                        .disabled(isGeneratingSummary)
                     }
-                    .disabled(isGeneratingSummary)
                 }
                 
                 Text(summary)
@@ -141,8 +146,8 @@ struct SessionDetailView: View {
             .padding()
             .background(Color.purple.opacity(0.1))
             .clipShape(RoundedRectangle(cornerRadius: 12))
-        } else {
-            // Generate summary button
+        } else if SummaryGenerator.isAvailable {
+            // Generate summary button - only when AI is available
             Button {
                 generateSummary()
             } label: {
@@ -186,14 +191,8 @@ struct SessionDetailView: View {
         
         Task {
             do {
-                let summary: String
-                if #available(iOS 26.0, *), SummaryGenerator.isAvailable {
-                    let generator = SummaryGenerator()
-                    summary = try await generator.generateSummary(for: session, comparison: comparison, sessionTypeName: typeName)
-                } else {
-                    // Fallback for devices without Foundation Models
-                    summary = SummaryGeneratorFallback.generateBasicSummary(for: session, comparison: comparison, sessionTypeName: typeName)
-                }
+                let generator = SummaryGenerator()
+                let summary = try await generator.generateSummary(for: session, comparison: comparison, sessionTypeName: typeName)
                 
                 // Update the session with the summary
                 await MainActor.run {
@@ -205,11 +204,6 @@ struct SessionDetailView: View {
             } catch {
                 print("Failed to generate summary: \(error)")
                 await MainActor.run {
-                    // Use fallback on error
-                    let summary = SummaryGeneratorFallback.generateBasicSummary(for: session, comparison: comparison, sessionTypeName: typeName)
-                    session.session.aiSummary = summary
-                    localAiSummary = summary
-                    try? modelContext.save()
                     isGeneratingSummary = false
                 }
             }

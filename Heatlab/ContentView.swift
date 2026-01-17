@@ -46,10 +46,10 @@ struct ContentView: View {
             .tag(1)
             
             NavigationStack {
-                TrendsView()
+                AnalysisView()
             }
             .tabItem {
-                Label("Trends", systemImage: "chart.xyaxis.line")
+                Label("Analysis", systemImage: "chart.xyaxis.line")
             }
             .tag(2)
             

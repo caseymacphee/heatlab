@@ -59,19 +59,22 @@ final class TrendCalculator {
                 totalSessions: 0,
                 totalDuration: 0,
                 totalCalories: 0,
-                averageHR: 0
+                averageHR: 0,
+                averageTemperature: 0
             )
         }
         
         let totalDuration = validSessions.reduce(0) { $0 + $1.stats.duration }
         let totalCalories = validSessions.reduce(0) { $0 + $1.stats.calories }
         let averageHR = validSessions.reduce(0) { $0 + $1.stats.averageHR } / Double(validSessions.count)
+        let averageTemperature = validSessions.reduce(0.0) { $0 + Double($1.session.roomTemperature) } / Double(validSessions.count)
         
         return OverallStats(
             totalSessions: validSessions.count,
             totalDuration: totalDuration,
             totalCalories: totalCalories,
-            averageHR: averageHR
+            averageHR: averageHR,
+            averageTemperature: averageTemperature
         )
     }
 }
@@ -115,6 +118,7 @@ struct OverallStats {
     let totalDuration: TimeInterval
     let totalCalories: Double
     let averageHR: Double
+    let averageTemperature: Double
     
     var formattedTotalDuration: String {
         let hours = Int(totalDuration / 3600)

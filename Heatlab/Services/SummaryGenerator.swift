@@ -7,8 +7,8 @@
 
 import Foundation
 import FoundationModels
+import Observation
 
-@available(iOS 26.0, *)
 @Observable
 final class SummaryGenerator {
     private var session: LanguageModelSession?
@@ -17,8 +17,28 @@ final class SummaryGenerator {
         // Session will be created lazily when needed
     }
     
+    /// Check if Apple Intelligence is available on this device
+    /// Returns false on simulators since AI models don't work there
+    static var isAvailable: Bool {
+        // Check if running on simulator
+        #if targetEnvironment(simulator)
+        return false
+        #else
+        // Also check at runtime in case compile-time check doesn't catch it
+        if ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] != nil {
+            return false
+        }
+        return SystemLanguageModel.default.isAvailable
+        #endif
+    }
+    
     @MainActor
     func generateSummary(for sessionWithStats: SessionWithStats, comparison: BaselineComparison, sessionTypeName: String? = nil) async throws -> String {
+        // Check availability first
+        guard Self.isAvailable else {
+            throw SummaryError.aiNotAvailable
+        }
+        
         // Create a new session if needed
         if session == nil {
             session = LanguageModelSession()
@@ -63,54 +83,21 @@ final class SummaryGenerator {
         Focus on how this session compares to their usual at similar temperatures. Be encouraging but not over-the-top.
         """
     }
-    
-    /// Check if the device supports Foundation Models
-    static var isAvailable: Bool {
-        // Foundation Models require iOS 26+ and Apple Silicon
-        if #available(iOS 26.0, *) {
-            return true
-        }
-        return false
-    }
 }
 
 enum SummaryError: LocalizedError {
+    case aiNotAvailable
     case sessionUnavailable
     case generationFailed
     
     var errorDescription: String? {
         switch self {
+        case .aiNotAvailable:
+            return "Apple Intelligence is not available on this device."
         case .sessionUnavailable:
-            return "AI summary generation is not available on this device."
+            return "AI summary generation is not available."
         case .generationFailed:
             return "Failed to generate summary. Please try again."
         }
     }
 }
-
-// Fallback for devices that don't support Foundation Models
-struct SummaryGeneratorFallback {
-    static func generateBasicSummary(for sessionWithStats: SessionWithStats, comparison: BaselineComparison, sessionTypeName: String? = nil) -> String {
-        let stats = sessionWithStats.stats
-        let heatSession = sessionWithStats.session
-        
-        let durationMinutes = Int(stats.duration / 60)
-        let typeName = sessionTypeName ?? "heated yoga"
-        
-        var summary = "You completed a \(durationMinutes)-minute \(typeName) session at \(heatSession.roomTemperature)°F. "
-        
-        switch comparison {
-        case .typical:
-            summary += "Your effort was consistent with your usual performance at this temperature."
-        case .higherEffort(percentAbove: let percent):
-            summary += "You pushed \(Int(percent))% harder than your typical session at this heat level."
-        case .lowerEffort(percentBelow: let percent):
-            summary += "This was a lighter session, \(Int(percent))% below your usual effort."
-        case .insufficientData:
-            summary += "Keep practicing to build your baseline for this temperature range."
-        }
-        
-        return summary
-    }
-}
-

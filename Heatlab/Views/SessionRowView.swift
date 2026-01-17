@@ -10,6 +10,7 @@ import SwiftUI
 struct SessionRowView: View {
     @Environment(UserSettings.self) var settings
     let session: SessionWithStats
+    var useRelativeTime: Bool = false
     
     var body: some View {
         HStack(spacing: 12) {
@@ -23,14 +24,18 @@ struct SessionRowView: View {
                 }
             
             VStack(alignment: .leading, spacing: 4) {
-                // Date and class type
-                HStack {
-                    Text(session.session.startDate.formatted(date: .abbreviated, time: .shortened))
+                // Date and class type with fixed positioning
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    // Fixed-width container for relative time to ensure consistent class type positioning
+                    Text(useRelativeTime ? relativeTimeString(for: session.session.startDate) : session.session.startDate.formatted(date: .abbreviated, time: .shortened))
                         .font(.headline)
+                        .frame(width: 110, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
                     
                     if let typeName = settings.sessionTypeName(for: session.session.sessionTypeId) {
                         Text("•")
                             .foregroundStyle(.secondary)
+                            .font(.headline)
                         Text(typeName)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -78,6 +83,12 @@ struct SessionRowView: View {
     private func formatDuration(_ duration: TimeInterval) -> String {
         let minutes = Int(duration) / 60
         return "\(minutes) min"
+    }
+    
+    private func relativeTimeString(for date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
 
