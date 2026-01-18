@@ -1,0 +1,65 @@
+{
+  "fill" : {
+    "automatic-gradient" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "glass" : false,
+          "hidden" : false,
+          "image-name" : "heat_pulse_arc_glow_only_1024_mid_v3.png",
+          "name" : "heat_pulse_arc_glow_only_1024_mid_v3",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              152.92621847023247,
+              -28.5
+            ]
+          }
+        },
+        {
+          "image-name" : "heat_pulse_arc_solid_foreground_1024_v5_highamp 5.png",
+          "name" : "heat_pulse_arc_solid_foreground_1024_v5_highamp 5"
+        },
+        {
+          "blend-mode" : "normal",
+          "fill" : {
+            "linear-gradient" : [
+              "display-p3:0.95877,0.60919,0.52001,1.00000",
+              "display-p3:0.87402,0.45786,0.35170,1.00000"
+            ],
+            "orientation" : {
+              "start" : {
+                "x" : 0.5,
+                "y" : 0
+              },
+              "stop" : {
+                "x" : 0.5,
+                "y" : 0.7
+              }
+            }
+          },
+          "glass" : true,
+          "hidden" : false,
+          "image-name" : "heatlab_frosty_filmic_bg_1024_red_v2.png",
+          "name" : "heatlab_frosty_filmic_bg_1024_red_v2"
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

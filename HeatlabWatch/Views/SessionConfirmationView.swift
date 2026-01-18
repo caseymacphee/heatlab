@@ -43,7 +43,7 @@ struct SessionConfirmationView: View {
                     if let avgHR = workout.statistics(for: HKQuantityType(.heartRate))?.averageQuantity()?.doubleValue(for: HKUnit.count().unitDivided(by: .minute())) {
                         VStack {
                             HStack(spacing: 2) {
-                                Image(systemName: "heart.fill")
+                                Image(icon: .heart)
                                     .foregroundStyle(.red)
                                     .font(.caption)
                                 Text("\(Int(avgHR))")
@@ -54,13 +54,13 @@ struct SessionConfirmationView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    
+
                     // Show calories if enabled
                     if settings.showCaloriesOnWatch,
                        let calories = workout.statistics(for: HKQuantityType(.activeEnergyBurned))?.sumQuantity()?.doubleValue(for: .kilocalorie()) {
                         VStack {
                             HStack(spacing: 2) {
-                                Image(systemName: "flame.fill")
+                                Image(icon: .fire)
                                     .foregroundStyle(.orange)
                                     .font(.caption)
                                 Text("\(Int(calories))")

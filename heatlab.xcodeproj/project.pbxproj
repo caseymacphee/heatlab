@@ -24,6 +24,8 @@
 		3C766B1B2F1520F400309D3D /* CloudKitStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B192F1520F400309D3D /* CloudKitStatus.swift */; };
 		3C76993B2F1A9446000FAEAD /* SessionTypeConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C76993A2F1A9446000FAEAD /* SessionTypeConfig.swift */; };
 		3C76993C2F1A9446000FAEAD /* SessionTypeConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C76993A2F1A9446000FAEAD /* SessionTypeConfig.swift */; };
+		3C76994B2F1B800000309D3D /* IconName.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C76994A2F1B800000309D3D /* IconName.swift */; };
+		3C76994C2F1B800000309D3D /* IconName.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C76994A2F1B800000309D3D /* IconName.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -93,6 +95,7 @@
 		3C766B0B2F1520F400309D3D /* UserSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSettings.swift; sourceTree = "<group>"; };
 		3C766B192F1520F400309D3D /* CloudKitStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitStatus.swift; sourceTree = "<group>"; };
 		3C76993A2F1A9446000FAEAD /* SessionTypeConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTypeConfig.swift; sourceTree = "<group>"; };
+		3C76994A2F1B800000309D3D /* IconName.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconName.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -240,6 +243,7 @@
 				3C766B082F1520F400309D3D /* Models */,
 				3C766B192F1520F400309D3D /* CloudKitStatus.swift */,
 				3C766B092F1520F400309D3D /* HeatLabModelContainer.swift */,
+				3C76994A2F1B800000309D3D /* IconName.swift */,
 				3C76993A2F1A9446000FAEAD /* SessionTypeConfig.swift */,
 				3C766B0A2F1520F400309D3D /* Temperature.swift */,
 				3C766B0B2F1520F400309D3D /* UserSettings.swift */,
@@ -504,6 +508,7 @@
 				3C766B112F1520F400309D3D /* Temperature.swift in Sources */,
 				3C766B122F1520F400309D3D /* HeatLabModelContainer.swift in Sources */,
 				3C766B1A2F1520F400309D3D /* CloudKitStatus.swift in Sources */,
+				3C76994B2F1B800000309D3D /* IconName.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -533,6 +538,7 @@
 				3C76993C2F1A9446000FAEAD /* SessionTypeConfig.swift in Sources */,
 				3C766B182F1520F400309D3D /* HeatLabModelContainer.swift in Sources */,
 				3C766B1B2F1520F400309D3D /* CloudKitStatus.swift in Sources */,
+				3C76994C2F1B800000309D3D /* IconName.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

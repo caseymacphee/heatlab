@@ -15,7 +15,7 @@ struct StartView: View {
             Spacer(minLength: 0)
             
             // App icon/branding
-            Image(systemName: "flame.fill")
+            Image(icon: .fireSolid)
                 .font(.system(size: 40))
                 .foregroundStyle(
                     LinearGradient(
@@ -40,9 +40,9 @@ struct StartView: View {
                 HStack {
                     ZStack {
                         // Fixed width container for icon/spinner
-                        Image(systemName: "play.fill")
+                        Image(icon: .playCircle)
                             .opacity(workoutManager.phase == .starting ? 0 : 1)
-                        
+
                         if workoutManager.phase == .starting {
                             ProgressView()
                                 .scaleEffect(0.8)

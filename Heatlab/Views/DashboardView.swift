@@ -16,13 +16,72 @@ struct DashboardView: View {
     @State private var isLoading = true
     @State private var weekComparison: PeriodComparison?
     @State private var selectedSession: SessionWithStats?
-    
+
     private let analysisCalculator = AnalysisCalculator()
-    
+
     /// Sessions from the last 7 days
     private var recentSessions: [SessionWithStats] {
         let sevenDaysAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         return sessions.filter { $0.session.startDate >= sevenDaysAgo }
+    }
+
+    @ViewBuilder
+    private func ComparisonStatsGrid(comparison: PeriodComparison) -> some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            ComparisonStatItem(
+                title: "Sessions",
+                currentValue: "\(comparison.current.sessionCount)",
+                delta: comparison.sessionCountDelta.map { Double($0) },
+                isPercentage: false,
+                systemIcon: "figure.yoga",
+                iconColor: .purple
+            )
+
+            ComparisonStatItem(
+                title: "Avg HR",
+                currentValue: comparison.current.avgHeartRate > 0 ? "\(Int(comparison.current.avgHeartRate)) bpm" : "--",
+                delta: comparison.avgHRDelta,
+                isPercentage: true,
+                invertDelta: true,
+                icon: .heart,
+                iconColor: .red
+            )
+
+            ComparisonStatItem(
+                title: "Duration",
+                currentValue: comparison.current.formattedDuration,
+                delta: comparison.durationDelta,
+                isPercentage: true,
+                icon: .clock,
+                iconColor: .blue
+            )
+
+            if settings.showCaloriesInApp {
+                ComparisonStatItem(
+                    title: "Calories",
+                    currentValue: comparison.current.totalCalories > 0 ? "\(Int(comparison.current.totalCalories))" : "--",
+                    delta: comparison.caloriesDelta,
+                    isPercentage: true,
+                    icon: .fire,
+                    iconColor: .orange
+                )
+            } else {
+                ComparisonStatItem(
+                    title: "Avg Temp",
+                    currentValue: comparison.current.avgTemperature > 0 ? formattedTemperature(comparison.current.avgTemperature) : "--",
+                    delta: comparison.avgTemperatureDelta,
+                    isPercentage: false,
+                    systemIcon: "thermometer.medium",
+                    iconColor: .orange
+                )
+            }
+        }
+    }
+
+    private func formattedTemperature(_ fahrenheit: Double) -> String {
+        let temp = Temperature(fahrenheit: Int(fahrenheit))
+        let value = temp.value(for: settings.temperatureUnit)
+        return "\(value)°"
     }
     
     var body: some View {
@@ -30,7 +89,7 @@ struct DashboardView: View {
             VStack(spacing: 20) {
                 // Header with flame
                 VStack(spacing: 8) {
-                    Image(systemName: "flame.fill")
+                    Image(icon: .fireSolid)
                         .font(.system(size: 60))
                         .foregroundStyle(
                             LinearGradient(
@@ -53,8 +112,24 @@ struct DashboardView: View {
                     ProgressView("Loading...")
                         .padding()
                 } else if let comparison = weekComparison, comparison.current.sessionCount > 0 {
-                    // This Week Stats using ComparisonCard
-                    ComparisonCard(comparison: comparison, period: .week)
+                    // Last 7 Days Stats
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Last 7 Days")
+                                .font(.headline)
+                            Spacer()
+                            if comparison.previous != nil {
+                                Text("vs Previous 7 Days")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        ComparisonStatsGrid(comparison: comparison)
+                    }
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                     
                     // Recent Sessions (last 7 days)
                     if !recentSessions.isEmpty {
@@ -124,11 +199,70 @@ struct DashboardView: View {
         isLoading = true
         let repo = SessionRepository(modelContext: modelContext)
         sessions = (try? await repo.fetchSessionsWithStats()) ?? []
-        
-        // Calculate week comparison using AnalysisCalculator
-        weekComparison = analysisCalculator.comparePeriods(sessions: sessions, period: .week)
-        
+
+        // DEBUG: Check session data
+        print("📊 DashboardView - Total sessions: \(sessions.count)")
+        print("📊 DashboardView - Sessions with HR: \(sessions.filter { $0.stats.averageHR > 0 }.count)")
+        print("📊 DashboardView - Sessions without workoutUUID: \(sessions.filter { $0.session.workoutUUID == nil }.count)")
+        print("📊 DashboardView - Recent sessions (last 7 days): \(recentSessions.count)")
+
+        // Calculate "last 7 days" comparison (not calendar week)
+        weekComparison = calculateLast7DaysComparison()
+        print("📊 DashboardView - Last 7 days sessions: \(weekComparison?.current.sessionCount ?? 0)")
+
         isLoading = false
+    }
+
+    /// Calculate comparison for last 7 days vs previous 7 days (not calendar week)
+    private func calculateLast7DaysComparison() -> PeriodComparison {
+        let now = Date()
+        let sevenDaysAgo = Calendar.current.date(byAdding: .day, value: -7, to: now) ?? now
+        let fourteenDaysAgo = Calendar.current.date(byAdding: .day, value: -14, to: now) ?? now
+
+        // Current period: last 7 days
+        let currentSessions = sessions.filter { $0.session.startDate >= sevenDaysAgo }
+        let currentStats = computePeriodStats(sessions: currentSessions, start: sevenDaysAgo, end: now)
+
+        // Previous period: 14-7 days ago
+        let previousSessions = sessions.filter { $0.session.startDate >= fourteenDaysAgo && $0.session.startDate < sevenDaysAgo }
+        let previousStats = computePeriodStats(sessions: previousSessions, start: fourteenDaysAgo, end: sevenDaysAgo)
+
+        return PeriodComparison(
+            current: currentStats,
+            previous: previousStats.sessionCount > 0 ? previousStats : nil
+        )
+    }
+
+    private func computePeriodStats(sessions: [SessionWithStats], start: Date, end: Date) -> PeriodStats {
+        guard !sessions.isEmpty else {
+            return PeriodStats(
+                periodStart: start,
+                periodEnd: end,
+                sessionCount: 0,
+                totalDuration: 0,
+                totalCalories: 0,
+                avgHeartRate: 0,
+                maxHeartRate: 0,
+                avgTemperature: 0
+            )
+        }
+
+        let totalDuration = sessions.reduce(0) { $0 + $1.stats.duration }
+        let totalCalories = sessions.reduce(0) { $0 + $1.stats.calories }
+        let avgHeartRate = sessions.reduce(0) { $0 + $1.stats.averageHR } / Double(sessions.count)
+        let maxHeartRate = sessions.map { $0.stats.maxHR }.max() ?? 0
+        let avgTemperature = sessions.reduce(0.0) { $0 + Double($1.session.roomTemperature) } / Double(sessions.count)
+
+        return PeriodStats(
+            periodStart: start,
+            periodEnd: end,
+            sessionCount: sessions.count,
+            totalDuration: totalDuration,
+            totalCalories: totalCalories,
+            avgHeartRate: avgHeartRate,
+            maxHeartRate: maxHeartRate,
+            avgTemperature: avgTemperature
+        )
     }
 }
 

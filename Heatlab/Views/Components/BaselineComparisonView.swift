@@ -12,9 +12,15 @@ struct BaselineComparisonView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: comparison.icon)
-                .font(.title2)
-                .foregroundStyle(iconColor)
+            Group {
+                if let heroIcon = comparison.heroIcon {
+                    Image(icon: heroIcon)
+                } else if let systemIcon = comparison.systemIcon {
+                    Image(systemName: systemIcon)
+                }
+            }
+            .font(.title2)
+            .foregroundStyle(iconColor)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text("vs Your Baseline")

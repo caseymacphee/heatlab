@@ -144,7 +144,7 @@ struct AnalysisView: View {
                             Text(selectedTemperature?.displayName ?? "All")
                                 .foregroundStyle(.primary)
                             Spacer()
-                            Image(systemName: "chevron.down")
+                            Image(icon: .chevronDown)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -154,13 +154,13 @@ struct AnalysisView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                 }
-                
+
                 // Class Type Filter
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Class Type")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    
+
                     Menu {
                         Button("All Classes") {
                             selectedClassType = nil
@@ -176,7 +176,7 @@ struct AnalysisView: View {
                             Text(selectedClassTypeName ?? "All")
                                 .foregroundStyle(.primary)
                             Spacer()
-                            Image(systemName: "chevron.down")
+                            Image(icon: .chevronDown)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -256,7 +256,7 @@ struct AnalysisView: View {
     private var insightSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Image(systemName: "sparkles")
+                Image(icon: .sparkles)
                     .foregroundStyle(.purple)
                 Text("Insight")
                     .font(.headline)
@@ -343,7 +343,7 @@ struct AnalysisView: View {
     
     private var noPriorPeriodHint: some View {
         HStack(spacing: 10) {
-            Image(systemName: "info.circle")
+            Image(icon: .informationCircle)
                 .foregroundStyle(.blue)
             
             Text(noPriorPeriodMessage)
@@ -369,7 +369,7 @@ struct AnalysisView: View {
     
     private func acclimationHint(sessionsNeeded: Int) -> some View {
         HStack(spacing: 10) {
-            Image(systemName: "flame")
+            Image(icon: .fire)
                 .foregroundStyle(.orange)
             
             VStack(alignment: .leading, spacing: 2) {
@@ -504,13 +504,26 @@ struct AnalysisView: View {
         isLoading = true
         let repo = SessionRepository(modelContext: modelContext)
         sessions = (try? await repo.fetchSessionsWithStats()) ?? []
+
+        // DEBUG: Check session data
+        print("📊 AnalysisView - Total sessions: \(sessions.count)")
+        print("📊 AnalysisView - Sessions with HR: \(sessions.filter { $0.stats.averageHR > 0 }.count)")
+        print("📊 AnalysisView - Sessions without workoutUUID: \(sessions.filter { $0.session.workoutUUID == nil }.count)")
+
         updateAnalysis()
         isLoading = false
     }
     
     private func updateAnalysis() {
         analysisResult = calculator.analyze(sessions: sessions, filters: filters)
-        
+
+        // DEBUG: Check analysis results
+        if let result = analysisResult {
+            print("📊 AnalysisView - After filtering: \(result.comparison.current.sessionCount) sessions")
+            print("📊 AnalysisView - hasData: \(result.hasData)")
+            print("📊 AnalysisView - hasComparison: \(result.hasComparison)")
+        }
+
         // Clear existing insight and trigger new generation with debounce
         aiInsight = nil
         scheduleInsightGeneration()

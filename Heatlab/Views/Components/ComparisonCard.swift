@@ -33,36 +33,36 @@ struct ComparisonCard: View {
                     currentValue: "\(comparison.current.sessionCount)",
                     delta: comparison.sessionCountDelta.map { Double($0) },
                     isPercentage: false,
-                    icon: "figure.yoga",
+                    systemIcon: "figure.yoga",
                     iconColor: .purple
                 )
-                
+
                 ComparisonStatItem(
                     title: "Avg HR",
                     currentValue: comparison.current.avgHeartRate > 0 ? "\(Int(comparison.current.avgHeartRate)) bpm" : "--",
                     delta: comparison.avgHRDelta,
                     isPercentage: true,
-                    invertDelta: true,  // Lower HR = improvement
-                    icon: "heart.fill",
+                    invertDelta: true,
+                    icon: .heart,
                     iconColor: .red
                 )
-                
+
                 ComparisonStatItem(
                     title: "Duration",
                     currentValue: comparison.current.formattedDuration,
                     delta: comparison.durationDelta,
                     isPercentage: true,
-                    icon: "clock.fill",
+                    icon: .clock,
                     iconColor: .blue
                 )
-                
+
                 if settings.showCaloriesInApp {
                     ComparisonStatItem(
                         title: "Calories",
                         currentValue: comparison.current.totalCalories > 0 ? "\(Int(comparison.current.totalCalories))" : "--",
                         delta: comparison.caloriesDelta,
                         isPercentage: true,
-                        icon: "flame.fill",
+                        icon: .fire,
                         iconColor: .orange
                     )
                 } else {
@@ -71,7 +71,7 @@ struct ComparisonCard: View {
                         currentValue: comparison.current.avgTemperature > 0 ? formattedTemperature(comparison.current.avgTemperature) : "--",
                         delta: comparison.avgTemperatureDelta,
                         isPercentage: false,
-                        icon: "thermometer.medium",
+                        systemIcon: "thermometer.medium",
                         iconColor: .orange
                     )
                 }
@@ -95,15 +95,22 @@ struct ComparisonStatItem: View {
     var delta: Double?
     var isPercentage: Bool = true
     var invertDelta: Bool = false  // When true, negative delta is shown as positive (improvement)
-    let icon: String
+    var icon: IconName?
+    var systemIcon: String?
     let iconColor: Color
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.caption)
-                    .foregroundStyle(iconColor)
+                if let icon = icon {
+                    Image(icon: icon)
+                        .font(.caption)
+                        .foregroundStyle(iconColor)
+                } else if let systemIcon = systemIcon {
+                    Image(systemName: systemIcon)
+                        .font(.caption)
+                        .foregroundStyle(iconColor)
+                }
                 Text(title)
                     .font(.caption)
                     .foregroundStyle(.secondary)

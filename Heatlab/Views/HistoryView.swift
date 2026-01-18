@@ -20,11 +20,11 @@ struct HistoryView: View {
             if isLoading {
                 ProgressView("Loading sessions...")
             } else if sessions.isEmpty {
-                ContentUnavailableView(
-                    "No Sessions Yet",
-                    systemImage: "flame",
-                    description: Text("Complete your first hot yoga session on your Apple Watch to see it here.")
-                )
+                ContentUnavailableView {
+                    Label("No Sessions Yet", image: IconName.fire.rawValue)
+                } description: {
+                    Text("Complete your first hot yoga session on your Apple Watch to see it here.")
+                }
             } else {
                 List(sessions) { session in
                     Button {
@@ -61,6 +61,12 @@ struct HistoryView: View {
         isLoading = true
         let repo = SessionRepository(modelContext: modelContext)
         sessions = (try? await repo.fetchSessionsWithStats()) ?? []
+
+        // DEBUG: Check session data
+        print("📊 HistoryView - Total sessions: \(sessions.count)")
+        print("📊 HistoryView - Sessions with HR: \(sessions.filter { $0.stats.averageHR > 0 }.count)")
+        print("📊 HistoryView - Sessions without workoutUUID: \(sessions.filter { $0.session.workoutUUID == nil }.count)")
+
         isLoading = false
     }
 }

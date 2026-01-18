@@ -10,14 +10,18 @@ import SwiftUI
 struct StatCard: View {
     let title: String
     let value: String
-    var icon: String? = nil
+    var icon: IconName?
+    var systemIcon: String?
     var iconColor: Color = .primary
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 if let icon = icon {
-                    Image(systemName: icon)
+                    Image(icon: icon)
+                        .foregroundStyle(iconColor)
+                } else if let systemIcon = systemIcon {
+                    Image(systemName: systemIcon)
                         .foregroundStyle(iconColor)
                 }
                 Text(title)
@@ -39,12 +43,12 @@ struct StatCard: View {
 #Preview {
     VStack {
         HStack {
-            StatCard(title: "Duration", value: "45:32", icon: "clock", iconColor: .blue)
-            StatCard(title: "Avg HR", value: "142 bpm", icon: "heart.fill", iconColor: .red)
+            StatCard(title: "Duration", value: "45:32", icon: .clock, iconColor: .blue)
+            StatCard(title: "Avg HR", value: "142 bpm", icon: .heart, iconColor: .red)
         }
         HStack {
-            StatCard(title: "Max HR", value: "168 bpm", icon: "heart.fill", iconColor: .pink)
-            StatCard(title: "Calories", value: "387 kcal", icon: "flame.fill", iconColor: .orange)
+            StatCard(title: "Max HR", value: "168 bpm", icon: .heart, iconColor: .pink)
+            StatCard(title: "Calories", value: "387 kcal", icon: .fire, iconColor: .orange)
         }
     }
     .padding()

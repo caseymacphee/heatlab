@@ -14,15 +14,6 @@ struct SessionRowView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Heat indicator
-            Circle()
-                .fill(temperatureGradient)
-                .frame(width: 44, height: 44)
-                .overlay {
-                    Image(systemName: "flame.fill")
-                        .foregroundStyle(.white)
-                }
-            
             VStack(alignment: .leading, spacing: 4) {
                 // Date and class type with fixed positioning
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -44,11 +35,11 @@ struct SessionRowView: View {
                 
                 // Quick stats
                 HStack(spacing: 16) {
-                    Label(formatDuration(session.stats.duration), systemImage: "clock")
-                    Label("\(Int(session.stats.averageHR)) bpm", systemImage: "heart.fill")
+                    Label(formatDuration(session.stats.duration), icon: .clock)
+                    Label("\(Int(session.stats.averageHR)) bpm", icon: .heart)
                         .foregroundStyle(.red)
                     if settings.showCaloriesInApp {
-                        Label("\(Int(session.stats.calories)) cal", systemImage: "flame.fill")
+                        Label("\(Int(session.stats.calories)) cal", icon: .fire)
                             .foregroundStyle(.orange)
                     }
                 }
@@ -67,19 +58,7 @@ struct SessionRowView: View {
         }
         .padding(.vertical, 4)
     }
-    
-    private var temperatureGradient: LinearGradient {
-        let temp = session.session.roomTemperature
-        let colors: [Color]
-        switch temp {
-        case ..<90: colors = [.yellow, .orange]
-        case 90..<100: colors = [.orange, .red]
-        case 100..<105: colors = [.red, .pink]
-        default: colors = [.pink, .purple]
-        }
-        return LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
-    }
-    
+
     private func formatDuration(_ duration: TimeInterval) -> String {
         let minutes = Int(duration) / 60
         return "\(minutes) min"

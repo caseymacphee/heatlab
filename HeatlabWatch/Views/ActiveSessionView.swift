@@ -33,7 +33,7 @@ struct ActiveSessionView: View {
                 // Heart Rate
                 VStack(spacing: 2) {
                     HStack(spacing: 4) {
-                        Image(systemName: "heart.fill")
+                        Image(icon: .heart)
                             .foregroundStyle(.red)
                         Text(workoutManager.heartRate > 0 ? "\(Int(workoutManager.heartRate))" : "--")
                             .font(.title3.bold())
@@ -42,12 +42,12 @@ struct ActiveSessionView: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 // Calories (if enabled)
                 if settings.showCaloriesOnWatch {
                     VStack(spacing: 2) {
                         HStack(spacing: 4) {
-                            Image(systemName: "flame.fill")
+                            Image(icon: .fire)
                                 .foregroundStyle(.orange)
                             Text(workoutManager.activeCalories > 0 ? "\(Int(workoutManager.activeCalories))" : "--")
                                 .font(.title3.bold())
@@ -71,13 +71,13 @@ struct ActiveSessionView: View {
                         workoutManager.pause()
                     }
                 } label: {
-                    Image(systemName: isPaused ? "play.fill" : "pause.fill")
+                    Image(icon: isPaused ? .playCircle : .pauseCircle)
                         .font(.title3)
                 }
                 .buttonStyle(.bordered)
                 .tint(isPaused ? .green : .yellow)
                 .disabled(isEnding)
-                
+
                 // End Button
                 Button {
                     showingEndConfirmation = true
@@ -86,7 +86,7 @@ struct ActiveSessionView: View {
                         ProgressView()
                             .scaleEffect(0.8)
                     } else {
-                        Image(systemName: "stop.fill")
+                        Image(icon: .stopCircle)
                             .font(.title3)
                     }
                 }

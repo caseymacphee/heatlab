@@ -30,6 +30,7 @@ struct SessionDetailView: View {
     @State private var editedSessionTypeId: UUID?
     @State private var editedNotes: String = ""
     @State private var editedPerceivedEffort: PerceivedEffort = .none
+    @State private var hapticGenerator: UIImpactFeedbackGenerator?
     
     var body: some View {
         ScrollView {
@@ -42,6 +43,7 @@ struct SessionDetailView: View {
             }
             .padding()
         }
+        .background(Color(.systemGroupedBackground))
         .navigationTitle("Session")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -92,19 +94,19 @@ struct SessionDetailView: View {
                     StatCard(
                         title: "Duration",
                         value: formatDuration(session.stats.duration),
-                        icon: "clock",
+                        icon: .clock,
                         iconColor: .blue
                     )
                     StatCard(
                         title: "Temperature",
                         value: Temperature(fahrenheit: session.session.roomTemperature).formatted(unit: settings.temperatureUnit),
-                        icon: "thermometer",
+                        systemIcon: "thermometer.medium",
                         iconColor: .orange
                     )
                     StatCard(
                         title: "Avg HR",
                         value: "\(Int(session.stats.averageHR)) bpm",
-                        icon: "heart.fill",
+                        icon: .heart,
                         iconColor: .red
                     )
                     // Show Calories if enabled, otherwise show Heart Rate Range if available
@@ -112,14 +114,14 @@ struct SessionDetailView: View {
                         StatCard(
                             title: "Calories",
                             value: "\(Int(session.stats.calories)) kcal",
-                            icon: "flame.fill",
+                            icon: .fire,
                             iconColor: .orange
                         )
                     } else if session.stats.minHR > 0 {
                         StatCard(
                             title: "HR Range",
                             value: "\(Int(session.stats.minHR))-\(Int(session.stats.maxHR)) bpm",
-                            icon: "waveform.path.ecg",
+                            systemIcon: "waveform.path.ecg",
                             iconColor: .purple
                         )
                     }
@@ -193,7 +195,7 @@ struct SessionDetailView: View {
                 } label: {
                     HStack {
                         Spacer()
-                        Image(systemName: "trash")
+                        Image(icon: .trash)
                         Text("Delete Session")
                         Spacer()
                     }
@@ -204,10 +206,10 @@ struct SessionDetailView: View {
                 }
             }
     }
-    
+
     @ViewBuilder
     private var editModeContent: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 24) {
             // Duration Editor
             DurationTimelineSlider(
                 maxDuration: maxDuration,
@@ -218,55 +220,126 @@ struct SessionDetailView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Temperature")
                     .font(.headline)
-                Stepper("\(editedTemperature)°\(settings.temperatureUnit == .fahrenheit ? "F" : "C")", value: $editedTemperature, in: 70...120, step: 1)
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            
-            // Session Type and Perceived Effort Editors (side by side)
-            HStack(spacing: 12) {
-                // Session Type Editor
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Session Type")
-                        .font(.headline)
-                    Picker("Session Type", selection: $editedSessionTypeId) {
-                        Text("None").tag(nil as UUID?)
-                        ForEach(settings.manageableSessionTypes) { type in
-                            Text(type.name).tag(type.id as UUID?)
+
+                HStack(spacing: 0) {
+                    Picker("Temperature", selection: $editedTemperature) {
+                        ForEach(70...120, id: \.self) { temp in
+                            Text("\(temp)°").tag(temp)
                         }
                     }
-                    .pickerStyle(.menu)
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                
-                // Perceived Effort Editor
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Perceived Effort")
-                        .font(.headline)
-                    Picker("Perceived Effort", selection: $editedPerceivedEffort) {
-                        ForEach(PerceivedEffort.allCases, id: \.self) { effort in
-                            Text(effort.displayName).tag(effort)
-                        }
+                    .pickerStyle(.wheel)
+                    .frame(width: 80, height: 120)
+                    .clipped()
+                    .onChange(of: editedTemperature) { _, _ in
+                        hapticGenerator?.impactOccurred()
                     }
-                    .pickerStyle(.menu)
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                    Spacer()
+
+                    // Visual temperature indicator
+                    VStack(spacing: 12) {
+                        Image(systemName: "thermometer.medium")
+                            .font(.system(size: 40))
+                            .foregroundStyle(temperatureColor(for: editedTemperature))
+
+                        Text("\(editedTemperature)°\(settings.temperatureUnit == .fahrenheit ? "F" : "C")")
+                            .font(.system(.title, design: .rounded, weight: .bold))
+                            .foregroundStyle(temperatureColor(for: editedTemperature))
+
+                        Text(temperatureLabel(for: editedTemperature))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color(.systemBackground))
+                        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                )
             }
             
+            // Session Type Editor
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Session Type")
+                    .font(.headline)
+                Menu {
+                    Button("None") {
+                        editedSessionTypeId = nil
+                    }
+                    ForEach(settings.manageableSessionTypes) { type in
+                        Button(type.name) {
+                            editedSessionTypeId = type.id
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text(settings.sessionTypeName(for: editedSessionTypeId) ?? "None")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(.systemBackground))
+                            .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                    )
+                }
+            }
+
+            // Perceived Effort Editor
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Perceived Effort")
+                    .font(.headline)
+                Menu {
+                    ForEach(PerceivedEffort.allCases, id: \.self) { effort in
+                        Button(effort.displayName) {
+                            editedPerceivedEffort = effort
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text(editedPerceivedEffort.displayName)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(.systemBackground))
+                            .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                    )
+                }
+            }
+
             // Notes Editor
             VStack(alignment: .leading, spacing: 8) {
                 Text("Notes")
                     .font(.headline)
-                TextEditor(text: $editedNotes)
-                    .frame(minHeight: 100)
-                    .padding(8)
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                ZStack(alignment: .topLeading) {
+                    if editedNotes.isEmpty {
+                        Text("Add notes about this session...")
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 16)
+                    }
+                    TextEditor(text: $editedNotes)
+                        .frame(minHeight: 120)
+                        .scrollContentBackground(.hidden)
+                        .padding(8)
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color(.systemBackground))
+                        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                )
             }
             
             // Delete button
@@ -275,7 +348,7 @@ struct SessionDetailView: View {
             } label: {
                 HStack {
                     Spacer()
-                    Image(systemName: "trash")
+                    Image(icon: .trash)
                     Text("Delete Session")
                     Spacer()
                 }
@@ -286,7 +359,7 @@ struct SessionDetailView: View {
             }
         }
     }
-    
+
     private func startEditing() {
         // Initialize edit state from session
         // Use original workout duration as max (before any manual override)
@@ -298,20 +371,25 @@ struct SessionDetailView: View {
             // Fallback to current duration if no workout/endDate
             maxDuration = session.stats.duration
         }
-        
+
         // Start with current duration (which may already be clipped)
         editedDuration = session.stats.duration
-        
+
         editedTemperature = session.session.roomTemperature
         editedSessionTypeId = session.session.sessionTypeId
         editedNotes = session.session.userNotes ?? ""
         editedPerceivedEffort = session.session.perceivedEffort
+
+        // Prepare haptic generator for temperature picker
+        hapticGenerator = UIImpactFeedbackGenerator(style: .light)
+        hapticGenerator?.prepare()
+
         isEditing = true
     }
     
     private func saveChanges() {
         session.session.markUpdated()
-        
+
         // Update duration - only set override if significantly different from max (within 1 second tolerance)
         let tolerance: TimeInterval = 1.0
         if editedDuration > tolerance && abs(editedDuration - maxDuration) > tolerance {
@@ -320,15 +398,23 @@ struct SessionDetailView: View {
             // Reset to original duration
             session.session.manualDurationOverride = nil
         }
-        
+
         // Update other fields
         session.session.roomTemperature = editedTemperature
         session.session.sessionTypeId = editedSessionTypeId
         session.session.userNotes = editedNotes.isEmpty ? nil : editedNotes
         session.session.perceivedEffort = editedPerceivedEffort
-        
+
         try? modelContext.save()
         isEditing = false
+
+        // Clean up haptic generator
+        hapticGenerator = nil
+
+        // Reload heart rate data to reflect duration changes
+        Task {
+            await loadHeartRateData()
+        }
     }
     
     private func deleteSession() {
@@ -344,7 +430,7 @@ struct SessionDetailView: View {
         if let summary = displaySummary {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Image(systemName: "sparkles")
+                    Image(icon: .sparkles)
                         .foregroundStyle(.purple)
                     Text("AI Summary")
                         .font(.headline)
@@ -354,13 +440,13 @@ struct SessionDetailView: View {
                         Button {
                             generateSummary()
                         } label: {
-                            Image(systemName: "arrow.clockwise")
+                            Image(icon: .arrowPath)
                                 .font(.caption)
                         }
                         .disabled(isGeneratingSummary)
                     }
                 }
-                
+
                 Text(summary)
                     .font(.body)
             }
@@ -377,7 +463,7 @@ struct SessionDetailView: View {
                         ProgressView()
                             .scaleEffect(0.8)
                     } else {
-                        Image(systemName: "sparkles")
+                        Image(icon: .sparkles)
                     }
                     Text(isGeneratingSummary ? "Generating..." : "Generate AI Summary")
                 }
@@ -435,11 +521,16 @@ struct SessionDetailView: View {
         await MainActor.run {
             isLoadingHeartRate = true
         }
-        
+
         do {
             let repository = SessionRepository(modelContext: modelContext)
-            let dataPoints = try await repository.fetchHeartRateDataPoints(for: session.session)
-            
+            var dataPoints = try await repository.fetchHeartRateDataPoints(for: session.session)
+
+            // Filter heart rate data points based on manual duration override
+            if let manualDuration = session.session.manualDurationOverride {
+                dataPoints = dataPoints.filter { $0.timeOffset <= manualDuration }
+            }
+
             await MainActor.run {
                 heartRateDataPoints = dataPoints
                 isLoadingHeartRate = false
@@ -450,6 +541,24 @@ struct SessionDetailView: View {
                 heartRateDataPoints = []
                 isLoadingHeartRate = false
             }
+        }
+    }
+
+    private func temperatureColor(for temp: Int) -> Color {
+        switch temp {
+        case ..<85: return .blue
+        case 85..<95: return .green
+        case 95..<105: return .orange
+        default: return .red
+        }
+    }
+
+    private func temperatureLabel(for temp: Int) -> String {
+        switch temp {
+        case ..<85: return "Cool"
+        case 85..<95: return "Warm"
+        case 95..<105: return "Hot"
+        default: return "Very Hot"
         }
     }
 }

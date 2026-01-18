@@ -110,12 +110,19 @@ enum BaselineComparison {
         }
     }
     
-    var icon: String {
+    var heroIcon: IconName? {
         switch self {
-        case .typical: return "equal.circle.fill"
-        case .higherEffort: return "arrow.up.circle.fill"
-        case .lowerEffort: return "arrow.down.circle.fill"
+        case .typical: return .minusCircle
+        case .higherEffort: return .arrowUpCircle
+        case .lowerEffort: return .arrowDownCircle
+        case .insufficientData: return nil
+        }
+    }
+
+    var systemIcon: String? {
+        switch self {
         case .insufficientData: return "chart.line.uptrend.xyaxis.circle"
+        default: return nil
         }
     }
     

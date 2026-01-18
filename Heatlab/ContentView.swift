@@ -12,12 +12,12 @@ import SwiftData
 struct ContentView: View {
     @Environment(CloudKitStatus.self) var cloudKitStatus
     @State private var selectedTab = 0
-    
+
     var body: some View {
         // Always show main content - never block on iCloud
         ZStack(alignment: .top) {
             tabView
-            
+
             // Show non-blocking banner when iCloud unavailable
             if !cloudKitStatus.isAvailable {
                 SyncBannerView()
@@ -26,38 +26,38 @@ struct ContentView: View {
         }
         .animation(.easeInOut, value: cloudKitStatus.isAvailable)
     }
-    
+
     private var tabView: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
                 DashboardView()
             }
             .tabItem {
-                Label("Home", systemImage: "flame.fill")
+                Label("Home", icon: selectedTab == 0 ? .homeSolid : .home)
             }
             .tag(0)
-            
+
             NavigationStack {
                 HistoryView()
             }
             .tabItem {
-                Label("Sessions", systemImage: "list.bullet")
+                Label("Sessions", icon: selectedTab == 1 ? .bars3Solid : .bars3)
             }
             .tag(1)
-            
+
             NavigationStack {
                 AnalysisView()
             }
             .tabItem {
-                Label("Analysis", systemImage: "chart.xyaxis.line")
+                Label("Analysis", icon: selectedTab == 2 ? .chartBarSolid : .chartBar)
             }
             .tag(2)
-            
+
             NavigationStack {
                 SettingsView()
             }
             .tabItem {
-                Label("Settings", systemImage: "gear")
+                Label("Settings", icon: selectedTab == 3 ? .cog6ToothSolid : .cog6Tooth)
             }
             .tag(3)
         }

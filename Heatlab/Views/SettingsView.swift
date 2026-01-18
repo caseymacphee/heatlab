@@ -69,7 +69,7 @@ struct SettingsView: View {
                     newTypeName = ""
                     showingAddTypeAlert = true
                 } label: {
-                    Label("Add Custom Type", systemImage: "plus.circle")
+                    Label("Add Custom Type", icon: .plusCircle)
                 }
             } header: {
                 Text("Session Types")

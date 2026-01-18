@@ -20,23 +20,23 @@ enum AnalysisPeriod: String, CaseIterable, Identifiable {
     
     var comparisonLabel: String {
         switch self {
-        case .week: return "vs Last Week"
+        case .week: return "vs Previous 7 Days"
         case .month: return "vs Last Month"
         case .year: return "vs Last Year"
         }
     }
-    
+
     var currentLabel: String {
         switch self {
-        case .week: return "This Week"
+        case .week: return "Last 7 Days"
         case .month: return "This Month"
         case .year: return "This Year"
         }
     }
-    
+
     var previousLabel: String {
         switch self {
-        case .week: return "Last Week"
+        case .week: return "Previous 7 Days"
         case .month: return "Last Month"
         case .year: return "Last Year"
         }
@@ -156,15 +156,15 @@ final class AnalysisCalculator {
             if let bucket = filters.temperatureBucket {
                 guard session.session.temperatureBucket == bucket else { return false }
             }
-            
+
             // Filter by class type if specified
             if let typeId = filters.sessionTypeId {
                 guard session.session.sessionTypeId == typeId else { return false }
             }
-            
-            // Exclude sessions with no HR data
-            guard session.stats.averageHR > 0 else { return false }
-            
+
+            // Allow sessions without HR data (they'll show in charts with 0 values)
+            // This lets users see all their sessions even if HR tracking failed
+
             return true
         }
     }
@@ -177,12 +177,13 @@ final class AnalysisCalculator {
         
         switch period {
         case .week:
-            guard let weekStart = calendar.dateInterval(of: .weekOfYear, for: now)?.start else {
-                return (now, now)
-            }
-            let adjustedStart = calendar.date(byAdding: .weekOfYear, value: -offset, to: weekStart)!
-            let adjustedEnd = calendar.date(byAdding: .weekOfYear, value: 1, to: adjustedStart)!
-            return (adjustedStart, min(adjustedEnd, now))
+            // Use rolling 7-day periods (not calendar week) for consistency with Dashboard
+            // offset=0: last 7 days (now - 7 days to now)
+            // offset=1: previous 7 days (now - 14 days to now - 7 days)
+            let daysBack = 7 * (offset + 1)
+            let periodEnd = calendar.date(byAdding: .day, value: -7 * offset, to: now) ?? now
+            let periodStart = calendar.date(byAdding: .day, value: -daysBack, to: now) ?? now
+            return (periodStart, min(periodEnd, now))
             
         case .month:
             // For month view, go back to same date in previous month (or N months ago for offset)
