@@ -148,6 +148,10 @@ final class WatchConnectivityRelay: NSObject, ObservableObject {
         if let lastSyncError = session.lastSyncError {
             dict["lastSyncError"] = lastSyncError
         }
+        dict["perceivedEffortRaw"] = session.perceivedEffortRaw
+        if let manualDuration = session.manualDurationOverride {
+            dict["manualDurationOverride"] = manualDuration
+        }
         
         return dict
     }

@@ -7,37 +7,87 @@
 
 import SwiftUI
 import SwiftData
+import HealthKit
 
 struct SessionDetailView: View {
     @Environment(\.modelContext) var modelContext
+    @Environment(\.dismiss) var dismiss
     @Environment(UserSettings.self) var settings
     let session: SessionWithStats
     let baselineEngine: BaselineEngine
     
     @State private var isGeneratingSummary = false
     @State private var localAiSummary: String?
+    @State private var isEditing = false
+    @State private var showingDeleteConfirmation = false
+    @State private var heartRateDataPoints: [HeartRateDataPoint] = []
+    @State private var isLoadingHeartRate = false
+    
+    // Edit state
+    @State private var editedDuration: TimeInterval = 0
+    @State private var maxDuration: TimeInterval = 0
+    @State private var editedTemperature: Int = 95
+    @State private var editedSessionTypeId: UUID?
+    @State private var editedNotes: String = ""
+    @State private var editedPerceivedEffort: PerceivedEffort = .none
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // Header with temperature badge
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(settings.sessionTypeName(for: session.session.sessionTypeId) ?? "Heated Class")
-                            .font(.title2.bold())
-                        Text(session.session.startDate.formatted(date: .complete, time: .shortened))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                if isEditing {
+                    editModeContent
+                } else {
+                    viewModeContent
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("Session")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if isEditing {
+                    Button("Save") {
+                        saveChanges()
                     }
-                    Spacer()
-                    TemperatureBadge(
-                        temperature: session.session.roomTemperature,
-                        unit: settings.temperatureUnit,
-                        size: .large
-                    )
+                } else {
+                    Button("Edit") {
+                        startEditing()
+                    }
+                }
+            }
+        }
+        .onAppear {
+            // Update baseline when viewing session
+            baselineEngine.updateBaseline(for: session.session, averageHR: session.stats.averageHR)
+            // Load heart rate data
+            Task {
+                await loadHeartRateData()
+            }
+        }
+        .alert("Delete Session", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                deleteSession()
+            }
+        } message: {
+            Text("Are you sure you want to delete this session? This action cannot be undone.")
+        }
+    }
+    
+    @ViewBuilder
+    private var viewModeContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+                // Header
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(settings.sessionTypeName(for: session.session.sessionTypeId) ?? "Heated Class")
+                        .font(.title2.bold())
+                    Text(session.session.startDate.formatted(date: .complete, time: .shortened))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
                 
-                // Stats Grid
+                // Stats Grid - Left to right, top to bottom: Duration, Temperature, Avg HR, Calories/HR Range
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                     StatCard(
                         title: "Duration",
@@ -46,17 +96,18 @@ struct SessionDetailView: View {
                         iconColor: .blue
                     )
                     StatCard(
+                        title: "Temperature",
+                        value: Temperature(fahrenheit: session.session.roomTemperature).formatted(unit: settings.temperatureUnit),
+                        icon: "thermometer",
+                        iconColor: .orange
+                    )
+                    StatCard(
                         title: "Avg HR",
                         value: "\(Int(session.stats.averageHR)) bpm",
                         icon: "heart.fill",
                         iconColor: .red
                     )
-                    StatCard(
-                        title: "Max HR",
-                        value: "\(Int(session.stats.maxHR)) bpm",
-                        icon: "heart.fill",
-                        iconColor: .pink
-                    )
+                    // Show Calories if enabled, otherwise show Heart Rate Range if available
                     if settings.showCaloriesInApp {
                         StatCard(
                             title: "Calories",
@@ -64,24 +115,36 @@ struct SessionDetailView: View {
                             icon: "flame.fill",
                             iconColor: .orange
                         )
+                    } else if session.stats.minHR > 0 {
+                        StatCard(
+                            title: "HR Range",
+                            value: "\(Int(session.stats.minHR))-\(Int(session.stats.maxHR)) bpm",
+                            icon: "waveform.path.ecg",
+                            iconColor: .purple
+                        )
                     }
                 }
                 
-                // Min HR and range
-                if session.stats.minHR > 0 {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Heart Rate Range")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Text("\(Int(session.stats.minHR)) - \(Int(session.stats.maxHR)) bpm")
-                                .font(.headline)
-                        }
-                        Spacer()
+                // Heart Rate Chart
+                if !heartRateDataPoints.isEmpty {
+                    HeartRateChartView(
+                        dataPoints: heartRateDataPoints,
+                        minHR: session.stats.minHR > 0 ? session.stats.minHR : 0,
+                        maxHR: session.stats.maxHR,
+                        averageHR: session.stats.averageHR
+                    )
+                } else if isLoadingHeartRate {
+                    VStack {
+                        ProgressView()
+                            .padding()
+                        Text("Loading heart rate data...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
-                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 220)
                     .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
                 
                 // Baseline Comparison
@@ -92,28 +155,186 @@ struct SessionDetailView: View {
                     aiSummarySection
                 }
                 
-                // Notes (if available)
-                if let notes = session.session.userNotes, !notes.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Notes")
-                            .font(.headline)
+                // Perceived Effort (always shown)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Perceived Effort")
+                        .font(.headline)
+                    Text(session.session.perceivedEffort.displayName)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(Color(.systemGray6))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                
+                // Notes (always shown)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Notes")
+                        .font(.headline)
+                    if let notes = session.session.userNotes, !notes.isEmpty {
                         Text(notes)
                             .font(.body)
                             .foregroundStyle(.secondary)
+                    } else {
+                        Text("No notes")
+                            .font(.body)
+                            .foregroundStyle(.tertiary)
                     }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(Color(.systemGray6))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                
+                // Delete button
+                Button(role: .destructive) {
+                    showingDeleteConfirmation = true
+                } label: {
+                    HStack {
+                        Spacer()
+                        Image(systemName: "trash")
+                        Text("Delete Session")
+                        Spacer()
+                    }
+                    .padding()
+                    .background(Color.red.opacity(0.1))
+                    .foregroundStyle(.red)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+    }
+    
+    @ViewBuilder
+    private var editModeContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            // Duration Editor
+            DurationTimelineSlider(
+                maxDuration: maxDuration,
+                selectedDuration: $editedDuration
+            )
+            
+            // Temperature Editor
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Temperature")
+                    .font(.headline)
+                Stepper("\(editedTemperature)°\(settings.temperatureUnit == .fahrenheit ? "F" : "C")", value: $editedTemperature, in: 70...120, step: 1)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            
+            // Session Type and Perceived Effort Editors (side by side)
+            HStack(spacing: 12) {
+                // Session Type Editor
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Session Type")
+                        .font(.headline)
+                    Picker("Session Type", selection: $editedSessionTypeId) {
+                        Text("None").tag(nil as UUID?)
+                        ForEach(settings.manageableSessionTypes) { type in
+                            Text(type.name).tag(type.id as UUID?)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                
+                // Perceived Effort Editor
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Perceived Effort")
+                        .font(.headline)
+                    Picker("Perceived Effort", selection: $editedPerceivedEffort) {
+                        ForEach(PerceivedEffort.allCases, id: \.self) { effort in
+                            Text(effort.displayName).tag(effort)
+                        }
+                    }
+                    .pickerStyle(.menu)
                     .padding()
                     .background(Color(.systemGray6))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
             }
-            .padding()
+            
+            // Notes Editor
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Notes")
+                    .font(.headline)
+                TextEditor(text: $editedNotes)
+                    .frame(minHeight: 100)
+                    .padding(8)
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            
+            // Delete button
+            Button(role: .destructive) {
+                showingDeleteConfirmation = true
+            } label: {
+                HStack {
+                    Spacer()
+                    Image(systemName: "trash")
+                    Text("Delete Session")
+                    Spacer()
+                }
+                .padding()
+                .background(Color.red.opacity(0.1))
+                .foregroundStyle(.red)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
         }
-        .navigationTitle("Session")
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            // Update baseline when viewing session
-            baselineEngine.updateBaseline(for: session.session, averageHR: session.stats.averageHR)
+    }
+    
+    private func startEditing() {
+        // Initialize edit state from session
+        // Use original workout duration as max (before any manual override)
+        if let workout = session.workout, workout.duration > 0 {
+            maxDuration = workout.duration
+        } else if let endDate = session.session.endDate {
+            maxDuration = endDate.timeIntervalSince(session.session.startDate)
+        } else {
+            // Fallback to current duration if no workout/endDate
+            maxDuration = session.stats.duration
         }
+        
+        // Start with current duration (which may already be clipped)
+        editedDuration = session.stats.duration
+        
+        editedTemperature = session.session.roomTemperature
+        editedSessionTypeId = session.session.sessionTypeId
+        editedNotes = session.session.userNotes ?? ""
+        editedPerceivedEffort = session.session.perceivedEffort
+        isEditing = true
+    }
+    
+    private func saveChanges() {
+        session.session.markUpdated()
+        
+        // Update duration - only set override if significantly different from max (within 1 second tolerance)
+        let tolerance: TimeInterval = 1.0
+        if editedDuration > tolerance && abs(editedDuration - maxDuration) > tolerance {
+            session.session.manualDurationOverride = editedDuration
+        } else {
+            // Reset to original duration
+            session.session.manualDurationOverride = nil
+        }
+        
+        // Update other fields
+        session.session.roomTemperature = editedTemperature
+        session.session.sessionTypeId = editedSessionTypeId
+        session.session.userNotes = editedNotes.isEmpty ? nil : editedNotes
+        session.session.perceivedEffort = editedPerceivedEffort
+        
+        try? modelContext.save()
+        isEditing = false
+    }
+    
+    private func deleteSession() {
+        session.session.softDelete()
+        try? modelContext.save()
+        dismiss()
     }
     
     @ViewBuilder
@@ -206,6 +427,28 @@ struct SessionDetailView: View {
                 await MainActor.run {
                     isGeneratingSummary = false
                 }
+            }
+        }
+    }
+    
+    private func loadHeartRateData() async {
+        await MainActor.run {
+            isLoadingHeartRate = true
+        }
+        
+        do {
+            let repository = SessionRepository(modelContext: modelContext)
+            let dataPoints = try await repository.fetchHeartRateDataPoints(for: session.session)
+            
+            await MainActor.run {
+                heartRateDataPoints = dataPoints
+                isLoadingHeartRate = false
+            }
+        } catch {
+            print("Failed to load heart rate data: \(error)")
+            await MainActor.run {
+                heartRateDataPoints = []
+                isLoadingHeartRate = false
             }
         }
     }

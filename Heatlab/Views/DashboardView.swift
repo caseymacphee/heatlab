@@ -15,6 +15,7 @@ struct DashboardView: View {
     @State private var sessions: [SessionWithStats] = []
     @State private var isLoading = true
     @State private var weekComparison: PeriodComparison?
+    @State private var selectedSession: SessionWithStats?
     
     private let analysisCalculator = AnalysisCalculator()
     
@@ -63,7 +64,12 @@ struct DashboardView: View {
                             
                             VStack(spacing: 8) {
                                 ForEach(recentSessions) { session in
-                                    SessionRowView(session: session, useRelativeTime: true)
+                                    Button {
+                                        selectedSession = session
+                                    } label: {
+                                        SessionRowView(session: session, useRelativeTime: true)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
                         }
@@ -105,6 +111,12 @@ struct DashboardView: View {
             Task {
                 await loadData()
             }
+        }
+        .navigationDestination(item: $selectedSession) { session in
+            SessionDetailView(
+                session: session,
+                baselineEngine: BaselineEngine(modelContext: modelContext)
+            )
         }
     }
     

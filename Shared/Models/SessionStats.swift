@@ -40,3 +40,13 @@ struct SessionWithStats: Identifiable, Hashable {
     }
 }
 
+/// Heart rate data point with time offset from session start
+struct HeartRateDataPoint: Identifiable {
+    let id = UUID()
+    let heartRate: Double
+    let timeOffset: TimeInterval
+    
+    var timeInMinutes: Double {
+        timeOffset / 60.0
+    }
+}

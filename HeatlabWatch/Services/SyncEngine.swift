@@ -173,9 +173,14 @@ final class SyncEngine {
         record["aiSummary"] = session.aiSummary
         record["createdAt"] = session.createdAt
         record["updatedAt"] = session.updatedAt
+        record["perceivedEffortRaw"] = session.perceivedEffortRaw
         
         if let workoutUUID = session.workoutUUID {
             record["workoutUUID"] = workoutUUID.uuidString
+        }
+        
+        if let manualDuration = session.manualDurationOverride {
+            record["manualDurationOverride"] = manualDuration
         }
         
         if let deletedAt = session.deletedAt {

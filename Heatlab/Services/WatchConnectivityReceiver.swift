@@ -141,6 +141,12 @@ final class WatchConnectivityReceiver: NSObject, ObservableObject {
         if let deletedAtTimestamp = data["deletedAt"] as? TimeInterval {
             session.deletedAt = Date(timeIntervalSince1970: deletedAtTimestamp)
         }
+        if let perceivedEffortRaw = data["perceivedEffortRaw"] as? String {
+            session.perceivedEffortRaw = perceivedEffortRaw
+        }
+        if let manualDuration = data["manualDurationOverride"] as? TimeInterval {
+            session.manualDurationOverride = manualDuration
+        }
     }
 }
 

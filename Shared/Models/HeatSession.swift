@@ -16,6 +16,27 @@ enum SyncState: String, Codable {
     case failed     // Sync failed, will retry
 }
 
+/// Perceived effort level for a session
+enum PerceivedEffort: String, Codable, CaseIterable {
+    case none = "none"
+    case veryEasy = "very_easy"
+    case easy = "easy"
+    case moderate = "moderate"
+    case hard = "hard"
+    case veryHard = "very_hard"
+    
+    var displayName: String {
+        switch self {
+        case .none: return "None"
+        case .veryEasy: return "Very Easy"
+        case .easy: return "Easy"
+        case .moderate: return "Moderate"
+        case .hard: return "Hard"
+        case .veryHard: return "Very Hard"
+        }
+    }
+}
+
 @Model
 final class HeatSession {
     // Identity
@@ -29,6 +50,8 @@ final class HeatSession {
     var sessionTypeId: UUID?  // References SessionTypeConfig.id
     var userNotes: String?
     var aiSummary: String?
+    var manualDurationOverride: TimeInterval?  // Manual duration override (overrides HealthKit workout duration)
+    var perceivedEffortRaw: String = PerceivedEffort.none.rawValue  // Store raw value for SwiftData compatibility
     
     // Timestamps
     var createdAt: Date = Date()
@@ -42,6 +65,11 @@ final class HeatSession {
     var syncState: SyncState {
         get { SyncState(rawValue: syncStateRaw) ?? .pending }
         set { syncStateRaw = newValue.rawValue }
+    }
+    
+    var perceivedEffort: PerceivedEffort {
+        get { PerceivedEffort(rawValue: perceivedEffortRaw) ?? .none }
+        set { perceivedEffortRaw = newValue.rawValue }
     }
     
     /// Whether this session needs to be synced to CloudKit
@@ -61,6 +89,7 @@ final class HeatSession {
         self.createdAt = Date()
         self.updatedAt = Date()
         self.syncStateRaw = SyncState.pending.rawValue
+        self.perceivedEffortRaw = PerceivedEffort.none.rawValue
     }
     
     /// Mark session as updated (call before any modification)
