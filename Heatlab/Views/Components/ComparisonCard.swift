@@ -33,8 +33,8 @@ struct ComparisonCard: View {
                     currentValue: "\(comparison.current.sessionCount)",
                     delta: comparison.sessionCountDelta.map { Double($0) },
                     isPercentage: false,
-                    systemIcon: "figure.yoga",
-                    iconColor: .purple
+                    systemIcon: SFSymbol.yoga,
+                    iconColor: Color.HeatLab.sessions
                 )
 
                 ComparisonStatItem(
@@ -43,8 +43,8 @@ struct ComparisonCard: View {
                     delta: comparison.avgHRDelta,
                     isPercentage: true,
                     invertDelta: true,
-                    icon: .heart,
-                    iconColor: .red
+                    systemIcon: SFSymbol.heartFill,
+                    iconColor: Color.HeatLab.heartRate
                 )
 
                 ComparisonStatItem(
@@ -52,8 +52,8 @@ struct ComparisonCard: View {
                     currentValue: comparison.current.formattedDuration,
                     delta: comparison.durationDelta,
                     isPercentage: true,
-                    icon: .clock,
-                    iconColor: .blue
+                    systemIcon: SFSymbol.clock,
+                    iconColor: Color.HeatLab.duration
                 )
 
                 if settings.showCaloriesInApp {
@@ -62,8 +62,8 @@ struct ComparisonCard: View {
                         currentValue: comparison.current.totalCalories > 0 ? "\(Int(comparison.current.totalCalories))" : "--",
                         delta: comparison.caloriesDelta,
                         isPercentage: true,
-                        icon: .fire,
-                        iconColor: .orange
+                        systemIcon: SFSymbol.fireFill,
+                        iconColor: Color.HeatLab.calories
                     )
                 } else {
                     ComparisonStatItem(
@@ -71,15 +71,13 @@ struct ComparisonCard: View {
                         currentValue: comparison.current.avgTemperature > 0 ? formattedTemperature(comparison.current.avgTemperature) : "--",
                         delta: comparison.avgTemperatureDelta,
                         isPercentage: false,
-                        systemIcon: "thermometer.medium",
-                        iconColor: .orange
+                        systemIcon: SFSymbol.thermometer,
+                        iconColor: Color.HeatLab.calories
                     )
                 }
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .heatLabCard()
     }
     
     private func formattedTemperature(_ fahrenheit: Double) -> String {
@@ -95,30 +93,23 @@ struct ComparisonStatItem: View {
     var delta: Double?
     var isPercentage: Bool = true
     var invertDelta: Bool = false  // When true, negative delta is shown as positive (improvement)
-    var icon: IconName?
-    var systemIcon: String?
+    var systemIcon: String
     let iconColor: Color
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 4) {
-                if let icon = icon {
-                    Image(icon: icon)
-                        .font(.caption)
-                        .foregroundStyle(iconColor)
-                } else if let systemIcon = systemIcon {
-                    Image(systemName: systemIcon)
-                        .font(.caption)
-                        .foregroundStyle(iconColor)
-                }
+                Image(systemName: systemIcon)
+                    .font(.caption)
+                    .foregroundStyle(iconColor)
                 Text(title)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            
+
             Text(currentValue)
                 .font(.title3.bold())
-            
+
             // Delta indicator
             if let delta = delta {
                 DeltaIndicator(

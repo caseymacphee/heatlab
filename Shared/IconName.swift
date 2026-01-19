@@ -4,10 +4,15 @@
 //
 //  Type-safe icon names for Heroicons integration
 //
+//  DEPRECATED: Use SFSymbol constants from HeatLabTheme.swift instead.
+//  This file is kept for backward compatibility during the migration.
+//  All new code should use SF Symbols via the SFSymbol enum.
+//
 
 import SwiftUI
 
 /// Icon names for Heroicons assets
+/// @available(*, deprecated, message: "Use SFSymbol constants from HeatLabTheme.swift instead")
 enum IconName: String {
     // Navigation - Outline
     case home = "icon-home"

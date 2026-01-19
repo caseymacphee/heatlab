@@ -9,6 +9,7 @@
 import SwiftUI
 import SwiftData
 import HealthKit
+import WatchKit
 
 struct SessionConfirmationView: View {
     @Environment(\.modelContext) var modelContext
@@ -16,7 +17,9 @@ struct SessionConfirmationView: View {
     @Environment(SyncEngine.self) var syncEngine
     @State private var temperatureInput: Int = 95
     @State private var selectedTypeId: UUID?
+    @State private var selectedEffort: PerceivedEffort = .moderate
     @State private var isSaving = false
+    @State private var showSavedAnimation = false
     @Namespace private var temperatureDialNamespace
     
     let workout: HKWorkout
@@ -28,7 +31,7 @@ struct SessionConfirmationView: View {
                 // Header
                 Text("Session Complete")
                     .font(.headline)
-                    .foregroundStyle(Color(red: 0.6, green: 0.75, blue: 0.55))
+                    .foregroundStyle(Color.HeatLab.coral)
                 
                 // Summary stats
                 HStack(spacing: 16) {
@@ -39,12 +42,12 @@ struct SessionConfirmationView: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
-                    
+
                     if let avgHR = workout.statistics(for: HKQuantityType(.heartRate))?.averageQuantity()?.doubleValue(for: HKUnit.count().unitDivided(by: .minute())) {
                         VStack {
                             HStack(spacing: 2) {
-                                Image(icon: .heart)
-                                    .foregroundStyle(.red)
+                                Image(systemName: SFSymbol.heartFill)
+                                    .foregroundStyle(Color.HeatLab.heartRate)
                                     .font(.caption)
                                 Text("\(Int(avgHR))")
                                     .font(.title3.bold())
@@ -60,8 +63,8 @@ struct SessionConfirmationView: View {
                        let calories = workout.statistics(for: HKQuantityType(.activeEnergyBurned))?.sumQuantity()?.doubleValue(for: .kilocalorie()) {
                         VStack {
                             HStack(spacing: 2) {
-                                Image(icon: .fire)
-                                    .foregroundStyle(.orange)
+                                Image(systemName: SFSymbol.fireFill)
+                                    .foregroundStyle(Color.HeatLab.calories)
                                     .font(.caption)
                                 Text("\(Int(calories))")
                                     .font(.title3.bold())
@@ -106,7 +109,17 @@ struct SessionConfirmationView: View {
                         }
                     }
                 }
-                
+
+                Divider()
+
+                // Perceived Effort - Wheel Picker
+                Text("Perceived Effort")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                EffortWheelPicker(selection: $selectedEffort)
+                    .frame(height: 44)
+
                 // Save Button
                 Button {
                     saveSession()
@@ -121,7 +134,7 @@ struct SessionConfirmationView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color(red: 0.6, green: 0.75, blue: 0.55))
+                .tint(Color.HeatLab.coral)
                 .disabled(isSaving)
                 .padding(.top, 8)
             }
@@ -131,6 +144,13 @@ struct SessionConfirmationView: View {
         .onAppear {
             // Initialize with last used temperature or default for unit
             temperatureInput = settings.lastRoomTemperature
+        }
+        .overlay {
+            if showSavedAnimation {
+                SavedAnimationOverlay {
+                    onComplete()
+                }
+            }
         }
     }
     
@@ -152,6 +172,7 @@ struct SessionConfirmationView: View {
         session.endDate = workout.endDate
         session.workoutUUID = workout.uuid
         session.sessionTypeId = selectedTypeId
+        session.perceivedEffort = selectedEffort
         // syncState is .pending by default - ready for background sync
         
         modelContext.insert(session)
@@ -160,14 +181,16 @@ struct SessionConfirmationView: View {
             try modelContext.save()
             // Remember temperature for next session
             settings.lastRoomTemperature = temperatureInput
-            
+
             // Trigger background sync (fire and forget - don't block exit)
             Task {
                 await syncEngine.syncPending(from: modelContext)
             }
-            
-            // Exit immediately - sync will complete in background
-            onComplete()
+
+            // Show saved animation, then exit
+            withAnimation(.easeOut(duration: 0.3)) {
+                showSavedAnimation = true
+            }
         } catch {
             print("Failed to save session: \(error)")
             isSaving = false  // Re-enable button only on error so user can retry
@@ -180,7 +203,7 @@ private struct SessionTypeButton: View {
     let name: String
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
@@ -194,11 +217,139 @@ private struct SessionTypeButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
-            .background(isSelected ? Color.orange : Color.gray.opacity(0.3))
+            .background(isSelected ? Color.HeatLab.coral : Color.gray.opacity(0.3))
             .foregroundStyle(isSelected ? .white : .gray)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.md))
         }
         .buttonStyle(.plain)
+    }
+}
+
+// Circular wheel picker - tap left/right sides to cycle, wraps around
+private struct EffortWheelPicker: View {
+    @Binding var selection: PerceivedEffort
+
+    private let efforts = PerceivedEffort.allCases
+
+    private var currentIndex: Int {
+        efforts.firstIndex(of: selection) ?? 3
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            // Left tap zone - go previous
+            Button {
+                let newIndex = wrappedIndex(currentIndex - 1)
+                WKInterfaceDevice.current().play(.click)
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    selection = efforts[newIndex]
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.caption2)
+                    Text(efforts[wrappedIndex(currentIndex - 1)].shortName)
+                        .font(.caption2)
+                }
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            // Center - current selection
+            Text(selection.shortName)
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+                .frame(width: 56, height: 36)
+                .background(Color.HeatLab.coral)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            // Right tap zone - go next
+            Button {
+                let newIndex = wrappedIndex(currentIndex + 1)
+                WKInterfaceDevice.current().play(.click)
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    selection = efforts[newIndex]
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(efforts[wrappedIndex(currentIndex + 1)].shortName)
+                        .font(.caption2)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                }
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func wrappedIndex(_ index: Int) -> Int {
+        let count = efforts.count
+        return ((index % count) + count) % count
+    }
+}
+
+// Animated checkmark overlay shown after saving
+private struct SavedAnimationOverlay: View {
+    let onDismiss: () -> Void
+
+    @State private var checkmarkScale: CGFloat = 0
+    @State private var checkmarkOpacity: Double = 0
+    @State private var ringProgress: CGFloat = 0
+
+    var body: some View {
+        ZStack {
+            // Dim background
+            Color.black.opacity(0.85)
+                .ignoresSafeArea()
+
+            VStack(spacing: 12) {
+                ZStack {
+                    // Animated ring
+                    Circle()
+                        .trim(from: 0, to: ringProgress)
+                        .stroke(Color.HeatLab.coral, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                        .frame(width: 60, height: 60)
+                        .rotationEffect(.degrees(-90))
+
+                    // Checkmark
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(Color.HeatLab.coral)
+                        .scaleEffect(checkmarkScale)
+                        .opacity(checkmarkOpacity)
+                }
+
+                Text("Saved")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .opacity(checkmarkOpacity)
+            }
+        }
+        .onAppear {
+            // Ring draws first
+            withAnimation(.easeOut(duration: 0.4)) {
+                ringProgress = 1.0
+            }
+
+            // Checkmark pops in after ring completes
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6).delay(0.35)) {
+                checkmarkScale = 1.0
+                checkmarkOpacity = 1.0
+            }
+
+            // Haptic feedback
+            WKInterfaceDevice.current().play(.success)
+
+            // Auto-dismiss after animation completes
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                onDismiss()
+            }
+        }
     }
 }
 

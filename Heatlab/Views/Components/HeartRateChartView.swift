@@ -34,7 +34,7 @@ struct HeartRateChartView: View {
                     )
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [.blue, .red],
+                            colors: [Color.HeatLab.tempHot, Color.HeatLab.tempVeryHot],
                             startPoint: .bottom,
                             endPoint: .top
                         )
@@ -92,9 +92,7 @@ struct HeartRateChartView: View {
                 .padding(.top, 4)
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .heatLabCard()
     }
     
     private var yAxisDomain: ClosedRange<Double> {

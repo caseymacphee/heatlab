@@ -12,16 +12,10 @@ struct BaselineComparisonView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            Group {
-                if let heroIcon = comparison.heroIcon {
-                    Image(icon: heroIcon)
-                } else if let systemIcon = comparison.systemIcon {
-                    Image(systemName: systemIcon)
-                }
-            }
-            .font(.title2)
-            .foregroundStyle(iconColor)
-            
+            Image(systemName: comparison.systemIcon)
+                .font(.title2)
+                .foregroundStyle(iconColor)
+
             VStack(alignment: .leading, spacing: 2) {
                 Text("vs Your Baseline")
                     .font(.caption)
@@ -29,12 +23,10 @@ struct BaselineComparisonView: View {
                 Text(comparison.displayText)
                     .font(.subheadline)
             }
-            
+
             Spacer()
         }
-        .padding()
-        .background(iconColor.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .heatLabHintCard(color: iconColor)
     }
     
     private var iconColor: Color {

@@ -15,15 +15,9 @@ struct StartView: View {
             Spacer(minLength: 0)
             
             // App icon/branding
-            Image(icon: .fireSolid)
+            Image(systemName: SFSymbol.fireFill)
                 .font(.system(size: 40))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [.orange, .red, .pink],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .foregroundStyle(LinearGradient.heatLabPrimary)
             
             Text("Heatlab")
                 .font(.title3.bold())
@@ -40,7 +34,7 @@ struct StartView: View {
                 HStack {
                     ZStack {
                         // Fixed width container for icon/spinner
-                        Image(icon: .playCircle)
+                        Image(systemName: SFSymbol.playFill)
                             .opacity(workoutManager.phase == .starting ? 0 : 1)
 
                         if workoutManager.phase == .starting {
@@ -53,7 +47,7 @@ struct StartView: View {
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.orange)
+            .tint(.accentColor)
             .disabled(workoutManager.phase != .idle)
         }
         .padding(.horizontal)

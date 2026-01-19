@@ -94,35 +94,35 @@ struct SessionDetailView: View {
                     StatCard(
                         title: "Duration",
                         value: formatDuration(session.stats.duration),
-                        icon: .clock,
-                        iconColor: .blue
+                        systemIcon: SFSymbol.clock,
+                        iconColor: Color.HeatLab.duration
                     )
                     StatCard(
                         title: "Temperature",
                         value: Temperature(fahrenheit: session.session.roomTemperature).formatted(unit: settings.temperatureUnit),
-                        systemIcon: "thermometer.medium",
-                        iconColor: .orange
+                        systemIcon: SFSymbol.thermometer,
+                        iconColor: Color.HeatLab.calories
                     )
                     StatCard(
                         title: "Avg HR",
                         value: "\(Int(session.stats.averageHR)) bpm",
-                        icon: .heart,
-                        iconColor: .red
+                        systemIcon: SFSymbol.heartFill,
+                        iconColor: Color.HeatLab.heartRate
                     )
                     // Show Calories if enabled, otherwise show Heart Rate Range if available
                     if settings.showCaloriesInApp {
                         StatCard(
                             title: "Calories",
                             value: "\(Int(session.stats.calories)) kcal",
-                            icon: .fire,
-                            iconColor: .orange
+                            systemIcon: SFSymbol.fireFill,
+                            iconColor: Color.HeatLab.calories
                         )
                     } else if session.stats.minHR > 0 {
                         StatCard(
                             title: "HR Range",
                             value: "\(Int(session.stats.minHR))-\(Int(session.stats.maxHR)) bpm",
-                            systemIcon: "waveform.path.ecg",
-                            iconColor: .purple
+                            systemIcon: SFSymbol.waveform,
+                            iconColor: Color.HeatLab.sessions
                         )
                     }
                 }
@@ -166,10 +166,8 @@ struct SessionDetailView: View {
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(Color(.systemGray6))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                
+                .heatLabSecondaryCard()
+
                 // Notes (always shown)
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Notes")
@@ -185,9 +183,7 @@ struct SessionDetailView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(Color(.systemGray6))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .heatLabSecondaryCard()
                 
                 // Delete button
                 Button(role: .destructive) {
@@ -195,14 +191,14 @@ struct SessionDetailView: View {
                 } label: {
                     HStack {
                         Spacer()
-                        Image(icon: .trash)
+                        Image(systemName: SFSymbol.trash)
                         Text("Delete Session")
                         Spacer()
                     }
                     .padding()
                     .background(Color.red.opacity(0.1))
                     .foregroundStyle(.red)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.md))
                 }
             }
     }
@@ -348,14 +344,14 @@ struct SessionDetailView: View {
             } label: {
                 HStack {
                     Spacer()
-                    Image(icon: .trash)
+                    Image(systemName: SFSymbol.trash)
                     Text("Delete Session")
                     Spacer()
                 }
                 .padding()
                 .background(Color.red.opacity(0.1))
                 .foregroundStyle(.red)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.md))
             }
         }
     }
@@ -426,12 +422,12 @@ struct SessionDetailView: View {
     @ViewBuilder
     private var aiSummarySection: some View {
         let displaySummary = localAiSummary ?? session.session.aiSummary
-        
+
         if let summary = displaySummary {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Image(icon: .sparkles)
-                        .foregroundStyle(.purple)
+                    Image(systemName: SFSymbol.sparkles)
+                        .foregroundStyle(Color.HeatLab.coral)
                     Text("AI Summary")
                         .font(.headline)
                     Spacer()
@@ -440,7 +436,7 @@ struct SessionDetailView: View {
                         Button {
                             generateSummary()
                         } label: {
-                            Image(icon: .arrowPath)
+                            Image(systemName: SFSymbol.refresh)
                                 .font(.caption)
                         }
                         .disabled(isGeneratingSummary)
@@ -451,8 +447,8 @@ struct SessionDetailView: View {
                     .font(.body)
             }
             .padding()
-            .background(Color.purple.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .background(LinearGradient.insight)
+            .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.md))
         } else if SummaryGenerator.isAvailable {
             // Generate summary button - only when AI is available
             Button {
@@ -463,15 +459,15 @@ struct SessionDetailView: View {
                         ProgressView()
                             .scaleEffect(0.8)
                     } else {
-                        Image(icon: .sparkles)
+                        Image(systemName: SFSymbol.sparkles)
                     }
                     Text(isGeneratingSummary ? "Generating..." : "Generate AI Summary")
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.purple.opacity(0.1))
-                .foregroundStyle(.purple)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .background(Color.HeatLab.coral.opacity(0.1))
+                .foregroundStyle(Color.HeatLab.coral)
+                .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.md))
             }
             .disabled(isGeneratingSummary)
         }
@@ -545,12 +541,7 @@ struct SessionDetailView: View {
     }
 
     private func temperatureColor(for temp: Int) -> Color {
-        switch temp {
-        case ..<85: return .blue
-        case 85..<95: return .green
-        case 95..<105: return .orange
-        default: return .red
-        }
+        Color.HeatLab.temperature(fahrenheit: temp)
     }
 
     private func temperatureLabel(for temp: Int) -> String {

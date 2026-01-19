@@ -33,8 +33,8 @@ struct DashboardView: View {
                 currentValue: "\(comparison.current.sessionCount)",
                 delta: comparison.sessionCountDelta.map { Double($0) },
                 isPercentage: false,
-                systemIcon: "figure.yoga",
-                iconColor: .purple
+                systemIcon: SFSymbol.yoga,
+                iconColor: Color.HeatLab.sessions
             )
 
             ComparisonStatItem(
@@ -43,8 +43,8 @@ struct DashboardView: View {
                 delta: comparison.avgHRDelta,
                 isPercentage: true,
                 invertDelta: true,
-                icon: .heart,
-                iconColor: .red
+                systemIcon: SFSymbol.heartFill,
+                iconColor: Color.HeatLab.heartRate
             )
 
             ComparisonStatItem(
@@ -52,8 +52,8 @@ struct DashboardView: View {
                 currentValue: comparison.current.formattedDuration,
                 delta: comparison.durationDelta,
                 isPercentage: true,
-                icon: .clock,
-                iconColor: .blue
+                systemIcon: SFSymbol.clock,
+                iconColor: Color.HeatLab.duration
             )
 
             if settings.showCaloriesInApp {
@@ -62,8 +62,8 @@ struct DashboardView: View {
                     currentValue: comparison.current.totalCalories > 0 ? "\(Int(comparison.current.totalCalories))" : "--",
                     delta: comparison.caloriesDelta,
                     isPercentage: true,
-                    icon: .fire,
-                    iconColor: .orange
+                    systemIcon: SFSymbol.fireFill,
+                    iconColor: Color.HeatLab.calories
                 )
             } else {
                 ComparisonStatItem(
@@ -71,8 +71,8 @@ struct DashboardView: View {
                     currentValue: comparison.current.avgTemperature > 0 ? formattedTemperature(comparison.current.avgTemperature) : "--",
                     delta: comparison.avgTemperatureDelta,
                     isPercentage: false,
-                    systemIcon: "thermometer.medium",
-                    iconColor: .orange
+                    systemIcon: SFSymbol.thermometer,
+                    iconColor: Color.HeatLab.calories
                 )
             }
         }
@@ -107,16 +107,14 @@ struct DashboardView: View {
 
                         ComparisonStatsGrid(comparison: comparison)
                     }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .heatLabCard()
                     
                     // Recent Sessions (last 7 days)
                     if !recentSessions.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Recent Sessions")
                                 .font(.headline)
-                            
+
                             VStack(spacing: 8) {
                                 ForEach(recentSessions) { session in
                                     Button {
@@ -128,20 +126,18 @@ struct DashboardView: View {
                                 }
                             }
                         }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .heatLabCard()
                     }
                 } else {
                     // Empty state
                     VStack(spacing: 16) {
-                        Image(systemName: "figure.yoga")
+                        Image(systemName: SFSymbol.yoga)
                             .font(.system(size: 50))
                             .foregroundStyle(.secondary)
-                        
+
                         Text("Ready to begin?")
                             .font(.title3.bold())
-                        
+
                         Text("Start a session on your Apple Watch to begin tracking.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -150,7 +146,7 @@ struct DashboardView: View {
                     .padding(40)
                     .frame(maxWidth: .infinity)
                     .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.lg))
                 }
             }
             .padding()

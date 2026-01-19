@@ -35,12 +35,12 @@ struct SessionRowView: View {
                 
                 // Quick stats
                 HStack(spacing: 16) {
-                    Label(formatDuration(session.stats.duration), icon: .clock)
-                    Label("\(Int(session.stats.averageHR)) bpm", icon: .heart)
-                        .foregroundStyle(.red)
+                    Label(formatDuration(session.stats.duration), systemImage: SFSymbol.clock)
+                    Label("\(Int(session.stats.averageHR)) bpm", systemImage: SFSymbol.heartFill)
+                        .foregroundStyle(Color.HeatLab.heartRate)
                     if settings.showCaloriesInApp {
-                        Label("\(Int(session.stats.calories)) cal", icon: .fire)
-                            .foregroundStyle(.orange)
+                        Label("\(Int(session.stats.calories)) cal", systemImage: SFSymbol.fireFill)
+                            .foregroundStyle(Color.HeatLab.calories)
                     }
                 }
                 .font(.caption)

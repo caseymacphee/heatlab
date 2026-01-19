@@ -18,7 +18,7 @@ struct ContentView: View {
                 DashboardView()
             }
             .tabItem {
-                Label("Home", icon: selectedTab == 0 ? .homeSolid : .home)
+                Label("Home", systemImage: selectedTab == 0 ? SFSymbol.homeFill : SFSymbol.home)
             }
             .tag(0)
 
@@ -26,7 +26,7 @@ struct ContentView: View {
                 HistoryView()
             }
             .tabItem {
-                Label("Sessions", icon: selectedTab == 1 ? .bars3Solid : .bars3)
+                Label("Sessions", systemImage: SFSymbol.sessions)
             }
             .tag(1)
 
@@ -34,7 +34,7 @@ struct ContentView: View {
                 AnalysisView()
             }
             .tabItem {
-                Label("Analysis", icon: selectedTab == 2 ? .chartBarSolid : .chartBar)
+                Label("Analysis", systemImage: selectedTab == 2 ? SFSymbol.analysisFill : SFSymbol.analysis)
             }
             .tag(2)
 
@@ -42,11 +42,11 @@ struct ContentView: View {
                 SettingsView()
             }
             .tabItem {
-                Label("Settings", icon: selectedTab == 3 ? .cog6ToothSolid : .cog6Tooth)
+                Label("Settings", systemImage: selectedTab == 3 ? SFSymbol.settingsFill : SFSymbol.settings)
             }
             .tag(3)
         }
-        .tint(.orange)
+        .tint(.accentColor)
     }
 }
 

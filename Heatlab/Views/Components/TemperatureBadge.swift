@@ -58,12 +58,7 @@ struct TemperatureBadge: View {
     
     /// Color based on Fahrenheit value (consistent regardless of display unit)
     private var backgroundColor: Color {
-        switch temperature {
-        case ..<90: return .yellow
-        case 90..<100: return .orange
-        case 100..<105: return .red
-        default: return .pink
-        }
+        Color.HeatLab.temperature(fahrenheit: temperature)
     }
 }
 

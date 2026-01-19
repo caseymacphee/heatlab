@@ -90,12 +90,7 @@ struct TemperatureDialView: View {
     private var temperatureColor: Color {
         // Convert to Fahrenheit for consistent color thresholds
         let fahrenheit = Temperature.fromUserInput(temperature, unit: unit).fahrenheit
-        switch fahrenheit {
-        case ..<90: return .yellow
-        case 90..<100: return .orange
-        case 100..<105: return .red
-        default: return .pink
-        }
+        return Color.HeatLab.temperature(fahrenheit: fahrenheit)
     }
 }
 
@@ -114,11 +109,7 @@ struct TemperatureGaugeView: View {
                 // Filled arc based on temperature
                 Arc(startAngle: .degrees(135), endAngle: .degrees(135 + progress * 270))
                     .stroke(
-                        LinearGradient(
-                            colors: [.yellow, .orange, .red, .pink],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        ),
+                        LinearGradient.temperatureGauge,
                         style: StrokeStyle(lineWidth: 6, lineCap: .round)
                     )
             }

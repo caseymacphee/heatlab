@@ -10,45 +10,37 @@ import SwiftUI
 struct StatCard: View {
     let title: String
     let value: String
-    var icon: IconName?
-    var systemIcon: String?
+    var systemIcon: String
     var iconColor: Color = .primary
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                if let icon = icon {
-                    Image(icon: icon)
-                        .foregroundStyle(iconColor)
-                } else if let systemIcon = systemIcon {
-                    Image(systemName: systemIcon)
-                        .foregroundStyle(iconColor)
-                }
+                Image(systemName: systemIcon)
+                    .foregroundStyle(iconColor)
                 Text(title)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            
+
             Text(value)
                 .font(.title2.bold())
                 .foregroundStyle(.primary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .heatLabSecondaryCard()
     }
 }
 
 #Preview {
     VStack {
         HStack {
-            StatCard(title: "Duration", value: "45:32", icon: .clock, iconColor: .blue)
-            StatCard(title: "Avg HR", value: "142 bpm", icon: .heart, iconColor: .red)
+            StatCard(title: "Duration", value: "45:32", systemIcon: SFSymbol.clock, iconColor: Color.HeatLab.duration)
+            StatCard(title: "Avg HR", value: "142 bpm", systemIcon: SFSymbol.heartFill, iconColor: Color.HeatLab.heartRate)
         }
         HStack {
-            StatCard(title: "Max HR", value: "168 bpm", icon: .heart, iconColor: .pink)
-            StatCard(title: "Calories", value: "387 kcal", icon: .fire, iconColor: .orange)
+            StatCard(title: "Max HR", value: "168 bpm", systemIcon: SFSymbol.heartFill, iconColor: .pink)
+            StatCard(title: "Calories", value: "387 kcal", systemIcon: SFSymbol.fireFill, iconColor: Color.HeatLab.calories)
         }
     }
     .padding()

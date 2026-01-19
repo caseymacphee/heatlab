@@ -35,6 +35,18 @@ enum PerceivedEffort: String, Codable, CaseIterable {
         case .veryHard: return "Very Hard"
         }
     }
+
+    /// Short name for compact displays (watchOS)
+    var shortName: String {
+        switch self {
+        case .none: return "None"
+        case .veryEasy: return "V.Easy"
+        case .easy: return "Easy"
+        case .moderate: return "Mod"
+        case .hard: return "Hard"
+        case .veryHard: return "V.Hard"
+        }
+    }
 }
 
 @Model

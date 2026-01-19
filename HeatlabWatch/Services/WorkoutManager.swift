@@ -44,6 +44,9 @@ final class WorkoutManager: NSObject {
     var heartRate: Double = 0
     var activeCalories: Double = 0
     var elapsedTime: TimeInterval = 0
+
+    // Heart rate history for real-time chart
+    var hrHistory: [HeartRateDataPoint] = []
     
     // Timer for elapsed time updates
     private var timer: Timer?
@@ -165,6 +168,7 @@ final class WorkoutManager: NSObject {
         elapsedTime = 0
         accumulatedTime = 0
         startDate = nil
+        hrHistory = []
         phase = .idle
     }
     
@@ -240,7 +244,14 @@ extension WorkoutManager: HKLiveWorkoutBuilderDelegate {
                 switch quantityType {
                 case HKQuantityType(.heartRate):
                     let hrUnit = HKUnit.count().unitDivided(by: .minute())
-                    self.heartRate = statistics?.mostRecentQuantity()?.doubleValue(for: hrUnit) ?? 0
+                    let newHR = statistics?.mostRecentQuantity()?.doubleValue(for: hrUnit) ?? 0
+                    self.heartRate = newHR
+
+                    // Append to history for real-time chart
+                    if newHR > 0 {
+                        let dataPoint = HeartRateDataPoint(heartRate: newHR, timeOffset: self.elapsedTime)
+                        self.hrHistory.append(dataPoint)
+                    }
                     
                 case HKQuantityType(.activeEnergyBurned):
                     let calUnit = HKUnit.kilocalorie()

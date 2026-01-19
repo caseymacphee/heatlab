@@ -145,14 +145,14 @@ struct AnalysisView: View {
                             Text(selectedTemperature?.displayName ?? "All")
                                 .foregroundStyle(.primary)
                             Spacer()
-                            Image(icon: .chevronDown)
+                            Image(systemName: SFSymbol.chevronDown)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
                         .background(Color(.systemGray6))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.sm))
                     }
                 }
 
@@ -177,14 +177,14 @@ struct AnalysisView: View {
                             Text(selectedClassTypeName ?? "All")
                                 .foregroundStyle(.primary)
                             Spacer()
-                            Image(icon: .chevronDown)
+                            Image(systemName: SFSymbol.chevronDown)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
                         .background(Color(.systemGray6))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.sm))
                     }
                 }
             }
@@ -238,9 +238,7 @@ struct AnalysisView: View {
                 .frame(height: 220)
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .heatLabCard()
     }
     
     private var periodDescription: String {
@@ -257,19 +255,19 @@ struct AnalysisView: View {
     private var insightSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Image(icon: .sparkles)
-                    .foregroundStyle(.purple)
+                Image(systemName: SFSymbol.sparkles)
+                    .foregroundStyle(Color.HeatLab.coral)
                 Text("Insight")
                     .font(.headline)
-                
+
                 Spacer()
-                
+
                 if isGeneratingInsight {
                     ProgressView()
                         .scaleEffect(0.8)
                 }
             }
-            
+
             if let insight = aiInsight {
                 Text(insight)
                     .font(.subheadline)
@@ -290,14 +288,8 @@ struct AnalysisView: View {
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            LinearGradient(
-                colors: [.purple.opacity(0.1), .blue.opacity(0.05)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .background(LinearGradient.insight)
+        .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.lg))
         .animation(.easeInOut(duration: 0.3), value: aiInsight)
     }
     
@@ -344,17 +336,14 @@ struct AnalysisView: View {
     
     private var noPriorPeriodHint: some View {
         HStack(spacing: 10) {
-            Image(icon: .informationCircle)
-                .foregroundStyle(.blue)
-            
+            Image(systemName: SFSymbol.info)
+                .foregroundStyle(Color.HeatLab.duration)
+
             Text(noPriorPeriodMessage)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.blue.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .heatLabHintCard(color: Color.HeatLab.duration)
     }
     
     private var noPriorPeriodMessage: String {
@@ -370,9 +359,9 @@ struct AnalysisView: View {
     
     private func acclimationHint(sessionsNeeded: Int) -> some View {
         HStack(spacing: 10) {
-            Image(icon: .fire)
-                .foregroundStyle(.orange)
-            
+            Image(systemName: SFSymbol.fireFill)
+                .foregroundStyle(Color.HeatLab.calories)
+
             VStack(alignment: .leading, spacing: 2) {
                 Text("Building Your Heat Baseline")
                     .font(.subheadline.bold())
@@ -381,22 +370,15 @@ struct AnalysisView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.orange.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .heatLabHintCard(color: Color.HeatLab.calories)
     }
     
     // MARK: - Chart Helpers
-    
+
     private var chartGradient: LinearGradient {
-        LinearGradient(
-            colors: [.orange, .red],
-            startPoint: .leading,
-            endPoint: .trailing
-        )
+        LinearGradient.heatLabChart
     }
-    
+
     private func yAxisDomain(for points: [TrendPoint]) -> ClosedRange<Double> {
         guard !points.isEmpty else { return 100...180 }
         let values = points.map { $0.value }
@@ -404,14 +386,9 @@ struct AnalysisView: View {
         let maxVal = (values.max() ?? 180) + 10
         return minVal...maxVal
     }
-    
+
     private func pointColor(for temperature: Int) -> Color {
-        switch temperature {
-        case ..<90: return .yellow
-        case 90..<100: return .orange
-        case 100..<105: return .red
-        default: return .pink
-        }
+        Color.HeatLab.temperature(fahrenheit: temperature)
     }
     
     private func formattedTemp(_ fahrenheit: Int) -> String {

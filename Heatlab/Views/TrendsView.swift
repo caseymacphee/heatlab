@@ -78,20 +78,18 @@ struct TrendsView: View {
                         .frame(height: 220)
                     }
                 }
-                .padding()
-                .background(Color(.systemGray6))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                
+                .heatLabCard()
+
                 // Acclimation Signal
                 if let acclimation = acclimation {
                     AcclimationCardView(signal: acclimation)
                 }
-                
+
                 // Session count by bucket
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Sessions by Temperature")
                         .font(.headline)
-                    
+
                     ForEach(TemperatureBucket.allCases, id: \.self) { bucket in
                         let count = sessions.filter { $0.session.temperatureBucket == bucket }.count
                         HStack {
@@ -99,7 +97,7 @@ struct TrendsView: View {
                             Spacer()
                             Text("\(count) sessions")
                                 .foregroundStyle(.secondary)
-                            
+
                             // Progress bar
                             let maxCount = max(1, sessions.count)
                             GeometryReader { geo in
@@ -115,9 +113,7 @@ struct TrendsView: View {
                         }
                     }
                 }
-                .padding()
-                .background(Color(.systemGray6))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .heatLabCard()
             }
             .padding()
         }
@@ -146,13 +142,9 @@ struct TrendsView: View {
     }
     
     private var chartGradient: LinearGradient {
-        LinearGradient(
-            colors: [.orange, .red],
-            startPoint: .leading,
-            endPoint: .trailing
-        )
+        LinearGradient.heatLabChart
     }
-    
+
     private var yAxisDomain: ClosedRange<Double> {
         guard !trendData.isEmpty else { return 100...180 }
         let values = trendData.map { $0.value }
@@ -160,22 +152,17 @@ struct TrendsView: View {
         let maxVal = (values.max() ?? 180) + 10
         return minVal...maxVal
     }
-    
+
     private func pointColor(for temperature: Int) -> Color {
-        switch temperature {
-        case ..<90: return .yellow
-        case 90..<100: return .orange
-        case 100..<105: return .red
-        default: return .pink
-        }
+        Color.HeatLab.temperature(fahrenheit: temperature)
     }
-    
+
     private func bucketColor(_ bucket: TemperatureBucket) -> Color {
         switch bucket {
-        case .warm: return .yellow
-        case .hot: return .orange
-        case .veryHot: return .red
-        case .extreme: return .pink
+        case .warm: return Color.HeatLab.tempWarm
+        case .hot: return Color.HeatLab.tempHot
+        case .veryHot: return Color.HeatLab.tempVeryHot
+        case .extreme: return Color.HeatLab.tempExtreme
         }
     }
     
