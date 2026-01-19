@@ -87,26 +87,6 @@ struct DashboardView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Header with flame
-                VStack(spacing: 8) {
-                    Image(icon: .fireSolid)
-                        .font(.system(size: 60))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.orange, .red, .pink],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                    
-                    Text("Heatlab")
-                        .font(.largeTitle.bold())
-                    
-                    Text("Track your Practice")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 20)
                 
                 if isLoading {
                     ProgressView("Loading...")
@@ -175,7 +155,8 @@ struct DashboardView: View {
             }
             .padding()
         }
-        .navigationTitle("Dashboard")
+        .navigationTitle("Home")
+        .navigationBarTitleDisplayMode(.inline)
         .task {
             await loadData()
         }

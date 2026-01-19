@@ -26,6 +26,8 @@
 		3C76993C2F1A9446000FAEAD /* SessionTypeConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C76993A2F1A9446000FAEAD /* SessionTypeConfig.swift */; };
 		3C76994B2F1B800000309D3D /* IconName.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C76994A2F1B800000309D3D /* IconName.swift */; };
 		3C76994C2F1B800000309D3D /* IconName.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C76994A2F1B800000309D3D /* IconName.swift */; };
+		3C769B5D2F1D8E9E000FAEAD /* HeatLabIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 3C769B5C2F1D8E9E000FAEAD /* HeatLabIcon.icon */; };
+		3C769B5E2F1D8E9E000FAEAD /* HeatLabIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 3C769B5C2F1D8E9E000FAEAD /* HeatLabIcon.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -96,6 +98,7 @@
 		3C766B192F1520F400309D3D /* CloudKitStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitStatus.swift; sourceTree = "<group>"; };
 		3C76993A2F1A9446000FAEAD /* SessionTypeConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTypeConfig.swift; sourceTree = "<group>"; };
 		3C76994A2F1B800000309D3D /* IconName.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconName.swift; sourceTree = "<group>"; };
+		3C769B5C2F1D8E9E000FAEAD /* HeatLabIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = HeatLabIcon.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -211,6 +214,7 @@
 				3C766A3C2F1400F100309D3D /* HeatlabWatchTests */,
 				3C766A462F1400F100309D3D /* HeatlabWatchUITests */,
 				3C7669FB2F14000900309D3D /* Products */,
+				3C769B5C2F1D8E9E000FAEAD /* HeatLabIcon.icon */,
 			);
 			sourceTree = "<group>";
 		};
@@ -455,6 +459,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3C769B5D2F1D8E9E000FAEAD /* HeatLabIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -476,6 +481,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3C769B5E2F1D8E9E000FAEAD /* HeatLabIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -590,8 +596,9 @@
 		3C766A1F2F14000B00309D3D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = HeatLabIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = heatlab/heatlab.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -612,20 +619,25 @@
 				PRODUCT_BUNDLE_IDENTIFIER = macpheelabs.heatlab;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
 		3C766A202F14000B00309D3D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = HeatLabIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = heatlab/heatlab.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -646,12 +658,16 @@
 				PRODUCT_BUNDLE_IDENTIFIER = macpheelabs.heatlab;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -863,7 +879,7 @@
 		3C766A4F2F1400F100309D3D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = HeatLabIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HeatlabWatch/HeatlabWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
@@ -898,7 +914,7 @@
 		3C766A502F1400F100309D3D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = HeatLabIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HeatlabWatch/HeatlabWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;

@@ -97,6 +97,7 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
         .alert("Add Custom Type", isPresented: $showingAddTypeAlert) {
             TextField("Type Name", text: $newTypeName)
             Button("Cancel", role: .cancel) { }

@@ -82,6 +82,7 @@ struct AnalysisView: View {
             .padding()
         }
         .navigationTitle("Analysis")
+        .navigationBarTitleDisplayMode(.inline)
         .task {
             await loadData()
         }
