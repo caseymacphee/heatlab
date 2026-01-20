@@ -8,13 +8,14 @@
         {
           "glass" : false,
           "hidden" : false,
-          "image-name" : "heat_pulse_arc_glow_only_1024_mid_v3.png",
-          "name" : "heat_pulse_arc_glow_only_1024_mid_v3",
+          "image-name" : "heat_pulse_arc_glow_only_1024 3.png",
+          "name" : "heat_pulse_arc_glow_only_1024 3",
+          "opacity" : 0.5,
           "position" : {
             "scale" : 1,
             "translation-in-points" : [
-              152.92621847023247,
-              -28.5
+              62.60565035312493,
+              -3
             ]
           }
         },
@@ -45,6 +46,19 @@
           "image-name" : "heatlab_frosty_filmic_bg_1024_red_v2.png",
           "name" : "heatlab_frosty_filmic_bg_1024_red_v2"
         }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    },
+    {
+      "layers" : [
+
       ],
       "shadow" : {
         "kind" : "neutral",

@@ -24,8 +24,6 @@
 		3C766B1B2F1520F400309D3D /* CloudKitStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B192F1520F400309D3D /* CloudKitStatus.swift */; };
 		3C76993B2F1A9446000FAEAD /* SessionTypeConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C76993A2F1A9446000FAEAD /* SessionTypeConfig.swift */; };
 		3C76993C2F1A9446000FAEAD /* SessionTypeConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C76993A2F1A9446000FAEAD /* SessionTypeConfig.swift */; };
-		3C76994B2F1B800000309D3D /* IconName.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C76994A2F1B800000309D3D /* IconName.swift */; };
-		3C76994C2F1B800000309D3D /* IconName.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C76994A2F1B800000309D3D /* IconName.swift */; };
 		3C769B5D2F1D8E9E000FAEAD /* HeatLabIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 3C769B5C2F1D8E9E000FAEAD /* HeatLabIcon.icon */; };
 		3C769B5E2F1D8E9E000FAEAD /* HeatLabIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 3C769B5C2F1D8E9E000FAEAD /* HeatLabIcon.icon */; };
 		3C769C042F1F000000309D3D /* HeatLabTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C769C012F1F000000309D3D /* HeatLabTheme.swift */; };
@@ -101,7 +99,6 @@
 		3C766B0B2F1520F400309D3D /* UserSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSettings.swift; sourceTree = "<group>"; };
 		3C766B192F1520F400309D3D /* CloudKitStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitStatus.swift; sourceTree = "<group>"; };
 		3C76993A2F1A9446000FAEAD /* SessionTypeConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTypeConfig.swift; sourceTree = "<group>"; };
-		3C76994A2F1B800000309D3D /* IconName.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconName.swift; sourceTree = "<group>"; };
 		3C769B5C2F1D8E9E000FAEAD /* HeatLabIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = HeatLabIcon.icon; sourceTree = "<group>"; };
 		3C769C012F1F000000309D3D /* HeatLabTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatLabTheme.swift; sourceTree = "<group>"; };
 		3C769C022F1F000000309D3D /* HeatLabStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatLabStyles.swift; sourceTree = "<group>"; };
@@ -254,7 +251,6 @@
 				3C769C032F1F000000309D3D /* Theme */,
 				3C766B192F1520F400309D3D /* CloudKitStatus.swift */,
 				3C766B092F1520F400309D3D /* HeatLabModelContainer.swift */,
-				3C76994A2F1B800000309D3D /* IconName.swift */,
 				3C76993A2F1A9446000FAEAD /* SessionTypeConfig.swift */,
 				3C766B0A2F1520F400309D3D /* Temperature.swift */,
 				3C766B0B2F1520F400309D3D /* UserSettings.swift */,
@@ -530,7 +526,6 @@
 				3C766B112F1520F400309D3D /* Temperature.swift in Sources */,
 				3C766B122F1520F400309D3D /* HeatLabModelContainer.swift in Sources */,
 				3C766B1A2F1520F400309D3D /* CloudKitStatus.swift in Sources */,
-				3C76994B2F1B800000309D3D /* IconName.swift in Sources */,
 				3C769C042F1F000000309D3D /* HeatLabTheme.swift in Sources */,
 				3C769C052F1F000000309D3D /* HeatLabStyles.swift in Sources */,
 			);
@@ -562,7 +557,6 @@
 				3C76993C2F1A9446000FAEAD /* SessionTypeConfig.swift in Sources */,
 				3C766B182F1520F400309D3D /* HeatLabModelContainer.swift in Sources */,
 				3C766B1B2F1520F400309D3D /* CloudKitStatus.swift in Sources */,
-				3C76994C2F1B800000309D3D /* IconName.swift in Sources */,
 				3C769C062F1F000000309D3D /* HeatLabTheme.swift in Sources */,
 				3C769C072F1F000000309D3D /* HeatLabStyles.swift in Sources */,
 			);

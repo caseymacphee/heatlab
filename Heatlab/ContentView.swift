@@ -15,7 +15,7 @@ struct ContentView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
-                DashboardView()
+                DashboardView(selectedTab: $selectedTab)
             }
             .tabItem {
                 Label("Home", systemImage: selectedTab == 0 ? SFSymbol.homeFill : SFSymbol.home)

@@ -167,8 +167,7 @@ struct ActiveSessionView: View {
 
             // Heart Rate Chart
             WatchHeartRateChartView(
-                dataPoints: workoutManager.hrHistory,
-                currentElapsedTime: workoutManager.elapsedTime
+                dataPoints: workoutManager.hrHistory
             )
             .frame(height: 100)
             .padding(.horizontal, 4)

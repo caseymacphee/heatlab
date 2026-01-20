@@ -36,11 +36,9 @@ struct SessionRowView: View {
                 // Quick stats
                 HStack(spacing: 16) {
                     Label(formatDuration(session.stats.duration), systemImage: SFSymbol.clock)
-                    Label("\(Int(session.stats.averageHR)) bpm", systemImage: SFSymbol.heartFill)
-                        .foregroundStyle(Color.HeatLab.heartRate)
+                    Label(session.stats.averageHR > 0 ? "\(Int(session.stats.averageHR)) bpm" : "--", systemImage: SFSymbol.heartFill)
                     if settings.showCaloriesInApp {
                         Label("\(Int(session.stats.calories)) cal", systemImage: SFSymbol.fireFill)
-                            .foregroundStyle(Color.HeatLab.calories)
                     }
                 }
                 .font(.caption)

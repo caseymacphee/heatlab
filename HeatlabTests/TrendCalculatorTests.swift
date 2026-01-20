@@ -146,39 +146,5 @@ final class TrendCalculatorTests: XCTestCase {
         XCTAssertNotNil(acclimation)
         XCTAssertEqual(acclimation?.direction, .stable)
     }
-    
-    // MARK: - Overall Stats Tests
-    
-    func testCalculateOverallStatsEmpty() {
-        let stats = calculator.calculateOverallStats(sessions: [])
-        
-        XCTAssertEqual(stats.totalSessions, 0)
-        XCTAssertEqual(stats.totalDuration, 0)
-        XCTAssertEqual(stats.totalCalories, 0)
-        XCTAssertEqual(stats.averageHR, 0)
-    }
-    
-    func testCalculateOverallStatsAggregate() {
-        let sessions = [
-            createSession(daysAgo: 2, temperature: 102, averageHR: 140),
-            createSession(daysAgo: 1, temperature: 95, averageHR: 150),
-        ]
-        
-        let stats = calculator.calculateOverallStats(sessions: sessions)
-        
-        XCTAssertEqual(stats.totalSessions, 2)
-        XCTAssertEqual(stats.totalDuration, 7200)  // 2 hours
-        XCTAssertEqual(stats.totalCalories, 600)   // 300 * 2
-        XCTAssertEqual(stats.averageHR, 145)       // (140 + 150) / 2
-    }
-    
-    func testCalculateOverallStatsExcludesInvalidSessions() {
-        let validSession = createSession(daysAgo: 1, temperature: 102, averageHR: 145)
-        let invalidSession = createSession(daysAgo: 2, temperature: 95, averageHR: 0)
-        
-        let stats = calculator.calculateOverallStats(sessions: [validSession, invalidSession])
-        
-        XCTAssertEqual(stats.totalSessions, 1)
-    }
 }
 

@@ -49,34 +49,6 @@ final class TrendCalculator {
             sessionCount: filtered.count
         )
     }
-    
-    /// Get overall stats across all sessions
-    func calculateOverallStats(sessions: [SessionWithStats]) -> OverallStats {
-        let validSessions = sessions.filter { $0.stats.averageHR > 0 }
-        
-        guard !validSessions.isEmpty else {
-            return OverallStats(
-                totalSessions: 0,
-                totalDuration: 0,
-                totalCalories: 0,
-                averageHR: 0,
-                averageTemperature: 0
-            )
-        }
-        
-        let totalDuration = validSessions.reduce(0) { $0 + $1.stats.duration }
-        let totalCalories = validSessions.reduce(0) { $0 + $1.stats.calories }
-        let averageHR = validSessions.reduce(0) { $0 + $1.stats.averageHR } / Double(validSessions.count)
-        let averageTemperature = validSessions.reduce(0.0) { $0 + Double($1.session.roomTemperature) } / Double(validSessions.count)
-        
-        return OverallStats(
-            totalSessions: validSessions.count,
-            totalDuration: totalDuration,
-            totalCalories: totalCalories,
-            averageHR: averageHR,
-            averageTemperature: averageTemperature
-        )
-    }
 }
 
 struct TrendPoint: Identifiable {
@@ -110,23 +82,6 @@ struct AcclimationSignal {
         case .improving: return "arrow.down.heart.fill"
         case .stable: return "equal.circle.fill"
         }
-    }
-}
-
-struct OverallStats {
-    let totalSessions: Int
-    let totalDuration: TimeInterval
-    let totalCalories: Double
-    let averageHR: Double
-    let averageTemperature: Double
-    
-    var formattedTotalDuration: String {
-        let hours = Int(totalDuration / 3600)
-        let minutes = Int((totalDuration.truncatingRemainder(dividingBy: 3600)) / 60)
-        if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        }
-        return "\(minutes) min"
     }
 }
 

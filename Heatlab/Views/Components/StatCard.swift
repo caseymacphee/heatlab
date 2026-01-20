@@ -11,13 +11,13 @@ struct StatCard: View {
     let title: String
     let value: String
     var systemIcon: String
-    var iconColor: Color = .primary
+    var iconColor: Color = .secondary
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: systemIcon)
-                    .foregroundStyle(iconColor)
+                    .foregroundStyle(.secondary)
                 Text(title)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -35,12 +35,12 @@ struct StatCard: View {
 #Preview {
     VStack {
         HStack {
-            StatCard(title: "Duration", value: "45:32", systemIcon: SFSymbol.clock, iconColor: Color.HeatLab.duration)
-            StatCard(title: "Avg HR", value: "142 bpm", systemIcon: SFSymbol.heartFill, iconColor: Color.HeatLab.heartRate)
+            StatCard(title: "Duration", value: "45:32", systemIcon: SFSymbol.clock)
+            StatCard(title: "Avg HR", value: "142 bpm", systemIcon: SFSymbol.heartFill)
         }
         HStack {
-            StatCard(title: "Max HR", value: "168 bpm", systemIcon: SFSymbol.heartFill, iconColor: .pink)
-            StatCard(title: "Calories", value: "387 kcal", systemIcon: SFSymbol.fireFill, iconColor: Color.HeatLab.calories)
+            StatCard(title: "Max HR", value: "168 bpm", systemIcon: SFSymbol.heartFill)
+            StatCard(title: "Calories", value: "387 kcal", systemIcon: SFSymbol.fireFill)
         }
     }
     .padding()

@@ -12,12 +12,19 @@ struct DashboardView: View {
     @Environment(\.modelContext) var modelContext
     @Environment(UserSettings.self) var settings
     @EnvironmentObject var wcReceiver: WatchConnectivityReceiver
+    @Binding var selectedTab: Int
+
     @State private var sessions: [SessionWithStats] = []
     @State private var isLoading = true
     @State private var weekComparison: PeriodComparison?
     @State private var selectedSession: SessionWithStats?
 
+    // Insight state
+    @State private var headlineInsight: String?
+    @State private var isGeneratingInsight = false
+
     private let analysisCalculator = AnalysisCalculator()
+    private let insightGenerator = AnalysisInsightGenerator()
 
     /// Sessions from the last 7 days
     private var recentSessions: [SessionWithStats] {
@@ -33,8 +40,7 @@ struct DashboardView: View {
                 currentValue: "\(comparison.current.sessionCount)",
                 delta: comparison.sessionCountDelta.map { Double($0) },
                 isPercentage: false,
-                systemIcon: SFSymbol.yoga,
-                iconColor: Color.HeatLab.sessions
+                systemIcon: SFSymbol.yoga
             )
 
             ComparisonStatItem(
@@ -43,8 +49,7 @@ struct DashboardView: View {
                 delta: comparison.avgHRDelta,
                 isPercentage: true,
                 invertDelta: true,
-                systemIcon: SFSymbol.heartFill,
-                iconColor: Color.HeatLab.heartRate
+                systemIcon: SFSymbol.heartFill
             )
 
             ComparisonStatItem(
@@ -52,8 +57,7 @@ struct DashboardView: View {
                 currentValue: comparison.current.formattedDuration,
                 delta: comparison.durationDelta,
                 isPercentage: true,
-                systemIcon: SFSymbol.clock,
-                iconColor: Color.HeatLab.duration
+                systemIcon: SFSymbol.clock
             )
 
             if settings.showCaloriesInApp {
@@ -62,8 +66,7 @@ struct DashboardView: View {
                     currentValue: comparison.current.totalCalories > 0 ? "\(Int(comparison.current.totalCalories))" : "--",
                     delta: comparison.caloriesDelta,
                     isPercentage: true,
-                    systemIcon: SFSymbol.fireFill,
-                    iconColor: Color.HeatLab.calories
+                    systemIcon: SFSymbol.fireFill
                 )
             } else {
                 ComparisonStatItem(
@@ -71,8 +74,7 @@ struct DashboardView: View {
                     currentValue: comparison.current.avgTemperature > 0 ? formattedTemperature(comparison.current.avgTemperature) : "--",
                     delta: comparison.avgTemperatureDelta,
                     isPercentage: false,
-                    systemIcon: SFSymbol.thermometer,
-                    iconColor: Color.HeatLab.calories
+                    systemIcon: SFSymbol.thermometer
                 )
             }
         }
@@ -87,12 +89,20 @@ struct DashboardView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                
+
                 if isLoading {
                     ProgressView("Loading...")
                         .padding()
                 } else if let comparison = weekComparison, comparison.current.sessionCount > 0 {
-                    // Last 7 Days Stats
+                    // MARK: - Insight Preview (taps to Analysis tab)
+                    InsightPreviewCard(
+                        insight: headlineInsight,
+                        isGenerating: isGeneratingInsight,
+                        sessionCount: comparison.current.sessionCount,
+                        onTap: { selectedTab = 2 }
+                    )
+
+                    // MARK: - Last 7 Days Stats
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             Text("Last 7 Days")
@@ -108,15 +118,25 @@ struct DashboardView: View {
                         ComparisonStatsGrid(comparison: comparison)
                     }
                     .heatLabCard()
-                    
-                    // Recent Sessions (last 7 days)
+
+                    // MARK: - Recent Sessions (limited to 3 + "See All")
                     if !recentSessions.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Recent Sessions")
-                                .font(.headline)
+                            HStack {
+                                Text("Recent Sessions")
+                                    .font(.headline)
+                                Spacer()
+                                if recentSessions.count > 3 {
+                                    Button("See All") {
+                                        selectedTab = 1
+                                    }
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.HeatLab.coral)
+                                }
+                            }
 
                             VStack(spacing: 8) {
-                                ForEach(recentSessions) { session in
+                                ForEach(recentSessions.prefix(3)) { session in
                                     Button {
                                         selectedSession = session
                                     } label: {
@@ -155,13 +175,16 @@ struct DashboardView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await loadData()
+            await generateHeadlineInsight()
         }
         .refreshable {
             await loadData()
+            await generateHeadlineInsight()
         }
         .onChange(of: wcReceiver.lastReceivedDate) {
             Task {
                 await loadData()
+                await generateHeadlineInsight()
             }
         }
         .navigationDestination(item: $selectedSession) { session in
@@ -226,8 +249,12 @@ struct DashboardView: View {
 
         let totalDuration = sessions.reduce(0) { $0 + $1.stats.duration }
         let totalCalories = sessions.reduce(0) { $0 + $1.stats.calories }
-        let avgHeartRate = sessions.reduce(0) { $0 + $1.stats.averageHR } / Double(sessions.count)
-        let maxHeartRate = sessions.map { $0.stats.maxHR }.max() ?? 0
+
+        // Only include sessions with valid HR data in heart rate averages
+        let sessionsWithHR = sessions.filter { $0.stats.averageHR > 0 }
+        let avgHeartRate = sessionsWithHR.isEmpty ? 0 : sessionsWithHR.reduce(0) { $0 + $1.stats.averageHR } / Double(sessionsWithHR.count)
+        let maxHeartRate = sessionsWithHR.map { $0.stats.maxHR }.max() ?? 0
+
         let avgTemperature = sessions.reduce(0.0) { $0 + Double($1.session.roomTemperature) } / Double(sessions.count)
 
         return PeriodStats(
@@ -241,11 +268,44 @@ struct DashboardView: View {
             avgTemperature: avgTemperature
         )
     }
+
+    @MainActor
+    private func generateHeadlineInsight() async {
+        // Only generate if AI is available and we have data
+        guard AnalysisInsightGenerator.isAvailable,
+              let comparison = weekComparison,
+              comparison.current.sessionCount >= 2 else {
+            return
+        }
+
+        isGeneratingInsight = true
+
+        let result = AnalysisResult(
+            filters: .default,
+            comparison: comparison,
+            trendPoints: [],
+            acclimation: nil,
+            sessionMap: [:]
+        )
+
+        do {
+            headlineInsight = try await insightGenerator.generateInsight(
+                for: result,
+                temperatureName: nil,
+                classTypeName: nil
+            )
+        } catch {
+            // Silently fail - insight is optional enhancement
+            print("Failed to generate headline insight: \(error)")
+        }
+
+        isGeneratingInsight = false
+    }
 }
 
 #Preview {
     NavigationStack {
-        DashboardView()
+        DashboardView(selectedTab: .constant(0))
     }
     .modelContainer(for: HeatSession.self, inMemory: true)
     .environment(UserSettings())

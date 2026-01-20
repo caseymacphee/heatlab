@@ -94,35 +94,30 @@ struct SessionDetailView: View {
                     StatCard(
                         title: "Duration",
                         value: formatDuration(session.stats.duration),
-                        systemIcon: SFSymbol.clock,
-                        iconColor: Color.HeatLab.duration
+                        systemIcon: SFSymbol.clock
                     )
                     StatCard(
                         title: "Temperature",
                         value: Temperature(fahrenheit: session.session.roomTemperature).formatted(unit: settings.temperatureUnit),
-                        systemIcon: SFSymbol.thermometer,
-                        iconColor: Color.HeatLab.calories
+                        systemIcon: SFSymbol.thermometer
                     )
                     StatCard(
                         title: "Avg HR",
-                        value: "\(Int(session.stats.averageHR)) bpm",
-                        systemIcon: SFSymbol.heartFill,
-                        iconColor: Color.HeatLab.heartRate
+                        value: session.stats.averageHR > 0 ? "\(Int(session.stats.averageHR)) bpm" : "--",
+                        systemIcon: SFSymbol.heartFill
                     )
                     // Show Calories if enabled, otherwise show Heart Rate Range if available
                     if settings.showCaloriesInApp {
                         StatCard(
                             title: "Calories",
                             value: "\(Int(session.stats.calories)) kcal",
-                            systemIcon: SFSymbol.fireFill,
-                            iconColor: Color.HeatLab.calories
+                            systemIcon: SFSymbol.fireFill
                         )
                     } else if session.stats.minHR > 0 {
                         StatCard(
                             title: "HR Range",
                             value: "\(Int(session.stats.minHR))-\(Int(session.stats.maxHR)) bpm",
-                            systemIcon: SFSymbol.waveform,
-                            iconColor: Color.HeatLab.sessions
+                            systemIcon: SFSymbol.waveform
                         )
                     }
                 }

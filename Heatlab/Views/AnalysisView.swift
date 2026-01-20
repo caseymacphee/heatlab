@@ -45,27 +45,25 @@ struct AnalysisView: View {
             VStack(alignment: .leading, spacing: 20) {
                 // MARK: - Filter Bar
                 filterSection
-                
+
                 if isLoading {
                     loadingView
                 } else if let result = analysisResult {
                     if result.hasData {
-                        // MARK: - AI Insight Card (only when Apple Intelligence available)
-                        if AnalysisInsightGenerator.isAvailable {
-                            insightSection
-                        }
-                        
+                        // MARK: - AI Insight Card (handles all states internally)
+                        insightSection
+
                         // MARK: - Comparison Card
                         ComparisonCard(comparison: result.comparison, period: selectedPeriod)
-                        
+
                         // MARK: - No Prior Period Data Hint
                         if !result.hasComparison {
                             noPriorPeriodHint
                         }
-                        
+
                         // MARK: - Trend Chart
                         trendChartSection(result: result)
-                        
+
                         // MARK: - Acclimation Signal
                         if let acclimation = result.acclimation {
                             AcclimationCardView(signal: acclimation)
@@ -80,6 +78,7 @@ struct AnalysisView: View {
                 }
             }
             .padding()
+            .padding(.bottom, 20)  // Extra padding to avoid tab bar clipping
         }
         .navigationTitle("Analysis")
         .navigationBarTitleDisplayMode(.inline)
@@ -106,88 +105,22 @@ struct AnalysisView: View {
     }
     
     // MARK: - Filter Section
-    
+
     private var filterSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Period Picker
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Time Period")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                
-                Picker("Period", selection: $selectedPeriod) {
-                    ForEach(AnalysisPeriod.allCases) { period in
-                        Text(period.rawValue).tag(period)
-                    }
-                }
-                .pickerStyle(.segmented)
-            }
-            
-            HStack(spacing: 12) {
-                // Temperature Filter
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Temperature")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    
-                    Menu {
-                        Button("All Temperatures") {
-                            selectedTemperature = nil
-                        }
-                        Divider()
-                        ForEach(TemperatureBucket.allCases, id: \.self) { bucket in
-                            Button(bucket.displayName) {
-                                selectedTemperature = bucket
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Text(selectedTemperature?.displayName ?? "All")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Image(systemName: SFSymbol.chevronDown)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .background(Color(.systemGray6))
-                        .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.sm))
-                    }
-                }
-
-                // Class Type Filter
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Class Type")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-
-                    Menu {
-                        Button("All Classes") {
-                            selectedClassType = nil
-                        }
-                        Divider()
-                        ForEach(settings.visibleSessionTypes, id: \.id) { sessionType in
-                            Button(sessionType.name) {
-                                selectedClassType = sessionType.id
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Text(selectedClassTypeName ?? "All")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Image(systemName: SFSymbol.chevronDown)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .background(Color(.systemGray6))
-                        .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.sm))
-                    }
+        VStack(alignment: .leading, spacing: 12) {
+            // Period Picker (keep visible - primary control)
+            Picker("Period", selection: $selectedPeriod) {
+                ForEach(AnalysisPeriod.allCases) { period in
+                    Text(period.rawValue).tag(period)
                 }
             }
+            .pickerStyle(.segmented)
+
+            // Compact filter pills for Temperature + Class Type
+            FilterPillRow(
+                selectedTemperature: $selectedTemperature,
+                selectedClassType: $selectedClassType
+            )
         }
     }
     
@@ -197,12 +130,12 @@ struct AnalysisView: View {
     }
     
     // MARK: - Trend Chart
-    
+
     private func trendChartSection(result: AnalysisResult) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Heart Rate Trend")
                 .font(.headline)
-            
+
             if result.trendPoints.isEmpty {
                 ContentUnavailableView(
                     "No Data for Period",
@@ -211,6 +144,9 @@ struct AnalysisView: View {
                 )
                 .frame(height: 200)
             } else {
+                // Chart summary row
+                chartSummary(for: result.trendPoints)
+
                 Chart(result.trendPoints) { point in
                     LineMark(
                         x: .value("Date", point.date),
@@ -218,7 +154,7 @@ struct AnalysisView: View {
                     )
                     .foregroundStyle(chartGradient)
                     .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round))
-                    
+
                     PointMark(
                         x: .value("Date", point.date),
                         y: .value("HR", point.value)
@@ -236,9 +172,47 @@ struct AnalysisView: View {
                     }
                 }
                 .frame(height: 220)
+                .padding(.bottom, 4)
             }
         }
         .heatLabCard()
+    }
+
+    @ViewBuilder
+    private func chartSummary(for points: [TrendPoint]) -> some View {
+        let values = points.map { $0.value }.filter { $0 > 0 }
+        let minValue = values.min() ?? 0
+        let maxValue = values.max() ?? 0
+        let avgValue = values.isEmpty ? 0 : values.reduce(0, +) / Double(values.count)
+
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Range")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                Text(minValue > 0 ? "\(Int(minValue))-\(Int(maxValue)) bpm" : "--")
+                    .font(.subheadline.bold())
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Average")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                Text(avgValue > 0 ? "\(Int(avgValue)) bpm" : "--")
+                    .font(.subheadline.bold())
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Sessions")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                Text("\(points.count)")
+                    .font(.subheadline.bold())
+            }
+
+            Spacer()
+        }
+        .padding(.bottom, 4)
     }
     
     private var periodDescription: String {
@@ -250,46 +224,28 @@ struct AnalysisView: View {
     }
     
     // MARK: - AI Insight Section
-    
+
     @ViewBuilder
     private var insightSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: SFSymbol.sparkles)
-                    .foregroundStyle(Color.HeatLab.coral)
-                Text("Insight")
-                    .font(.headline)
-
-                Spacer()
-
-                if isGeneratingInsight {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                }
+        let state: AIInsightState = {
+            if !AnalysisInsightGenerator.isAvailable {
+                return .unavailable
             }
-
             if let insight = aiInsight {
-                Text(insight)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-            } else if isGeneratingInsight {
-                Text("Analyzing your practice data...")
-                    .font(.subheadline)
-                    .foregroundStyle(.tertiary)
-                    .italic()
-            } else if analysisResult?.hasData == true {
-                // Show placeholder when we have data but no insight yet
-                Text("Generating insight...")
-                    .font(.subheadline)
-                    .foregroundStyle(.tertiary)
-                    .italic()
+                return .ready(insight)
             }
+            if isGeneratingInsight {
+                return .generating
+            }
+            if let result = analysisResult, result.comparison.current.sessionCount < 2 {
+                return .insufficientData(sessionsNeeded: 2 - result.comparison.current.sessionCount)
+            }
+            return .generating
+        }()
+
+        AIInsightSection(state: state) {
+            scheduleInsightGeneration()
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(LinearGradient.insight)
-        .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.lg))
         .animation(.easeInOut(duration: 0.3), value: aiInsight)
     }
     
@@ -333,34 +289,19 @@ struct AnalysisView: View {
     }
     
     // MARK: - Context Hints
-    
-    private var noPriorPeriodHint: some View {
-        HStack(spacing: 10) {
-            Image(systemName: SFSymbol.info)
-                .foregroundStyle(Color.HeatLab.duration)
 
-            Text(noPriorPeriodMessage)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .heatLabHintCard(color: Color.HeatLab.duration)
-    }
-    
-    private var noPriorPeriodMessage: String {
-        switch selectedPeriod {
-        case .week:
-            return "No data from last week to compare. Keep practicing!"
-        case .month:
-            return "No data from last month to compare. Your trends will become richer over time."
-        case .year:
-            return "Year-over-year comparison requires data from the same period last year. This is a powerful feature that gets better with time!"
-        }
+    private var noPriorPeriodHint: some View {
+        Text("Comparison data will appear next \(selectedPeriod.rawValue.lowercased())")
+            .font(.caption)
+            .foregroundStyle(.tertiary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 4)
     }
     
     private func acclimationHint(sessionsNeeded: Int) -> some View {
         HStack(spacing: 10) {
             Image(systemName: SFSymbol.fireFill)
-                .foregroundStyle(Color.HeatLab.calories)
+                .foregroundStyle(Color.HeatLab.coral)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Building Your Heat Baseline")
@@ -370,7 +311,7 @@ struct AnalysisView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .heatLabHintCard(color: Color.HeatLab.calories)
+        .heatLabHintCard(color: Color.HeatLab.coral)
     }
     
     // MARK: - Chart Helpers

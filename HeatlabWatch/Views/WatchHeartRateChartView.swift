@@ -3,7 +3,7 @@
 //  HeatlabWatch
 //
 //  Compact heart rate chart for watchOS real-time display
-//  Shows a sliding 5-minute window with T-5 to T (current) on X-axis
+//  Shows a sliding 5-minute window with -5m to now on X-axis
 //
 
 import SwiftUI
@@ -11,16 +11,18 @@ import Charts
 
 struct WatchHeartRateChartView: View {
     let dataPoints: [HeartRateDataPoint]
-    let currentElapsedTime: TimeInterval
 
     private let windowMinutes: Double = 5.0
 
-    /// Data points filtered to last 5 minutes, with X values relative to current time
-    private var windowedDataPoints: [(x: Double, y: Double)] {
-        let windowSeconds = windowMinutes * 60.0
+    /// Reference time is the latest data point's timestamp (chart only advances with new data)
+    private var referenceTime: TimeInterval {
+        dataPoints.last?.timeOffset ?? 0
+    }
 
+    /// Data points filtered to last 5 minutes, with X values relative to latest data point
+    private var windowedDataPoints: [(x: Double, y: Double)] {
         return dataPoints.compactMap { point in
-            let relativeTime = point.timeOffset - currentElapsedTime
+            let relativeTime = point.timeOffset - referenceTime
             let relativeMinutes = relativeTime / 60.0
 
             // Only include points within the 5-minute window
@@ -61,15 +63,15 @@ struct WatchHeartRateChartView: View {
             }
             .chartXScale(domain: -windowMinutes...0)
             .chartXAxis {
-                AxisMarks(values: [-5.0, -2.5, 0.0]) { value in
+                AxisMarks(values: [-5.0, -4.0, -3.0, -2.0, -1.0, 0.0]) { value in
                     AxisGridLine()
                     AxisValueLabel {
                         if let minutes = value.as(Double.self) {
                             if minutes == 0 {
-                                Text("T")
+                                Text("now")
                                     .font(.system(size: 9))
                             } else {
-                                Text("T\(Int(minutes))")
+                                Text("\(Int(minutes))m")
                                     .font(.system(size: 9))
                             }
                         }
@@ -109,15 +111,13 @@ struct WatchHeartRateChartView: View {
 
 #Preview {
     // 5 minutes of data at 30-second intervals (10 points)
-    let currentTime: TimeInterval = 5 * 60
-    return WatchHeartRateChartView(
+    WatchHeartRateChartView(
         dataPoints: (0..<10).map { index in
             HeartRateDataPoint(
                 heartRate: Double(110 + Int.random(in: -10...30)),
                 timeOffset: TimeInterval(index * 30)
             )
-        },
-        currentElapsedTime: currentTime
+        }
     )
     .frame(height: 120)
     .padding()

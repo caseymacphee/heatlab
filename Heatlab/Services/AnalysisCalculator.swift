@@ -144,8 +144,9 @@ struct AnalysisResult {
 
 @Observable
 final class AnalysisCalculator {
-    
+
     private let calendar = Calendar.current
+    private let trendCalculator = TrendCalculator()
     
     // MARK: - Filtering
     
@@ -233,8 +234,12 @@ final class AnalysisCalculator {
         
         let totalDuration = periodSessions.reduce(0) { $0 + $1.stats.duration }
         let totalCalories = periodSessions.reduce(0) { $0 + $1.stats.calories }
-        let avgHeartRate = periodSessions.reduce(0) { $0 + $1.stats.averageHR } / Double(periodSessions.count)
-        let maxHeartRate = periodSessions.map { $0.stats.maxHR }.max() ?? 0
+
+        // Only include sessions with valid HR data in heart rate averages
+        let sessionsWithHR = periodSessions.filter { $0.stats.averageHR > 0 }
+        let avgHeartRate = sessionsWithHR.isEmpty ? 0 : sessionsWithHR.reduce(0) { $0 + $1.stats.averageHR } / Double(sessionsWithHR.count)
+        let maxHeartRate = sessionsWithHR.map { $0.stats.maxHR }.max() ?? 0
+
         let avgTemperature = periodSessions.reduce(0.0) { $0 + Double($1.session.roomTemperature) } / Double(periodSessions.count)
         
         return PeriodStats(
@@ -279,30 +284,6 @@ final class AnalysisCalculator {
         }
     }
     
-    // MARK: - Acclimation
-    
-    /// Calculate acclimation signal for filtered sessions
-    func calculateAcclimation(sessions: [SessionWithStats]) -> AcclimationSignal? {
-        let sorted = sessions.sorted { $0.session.startDate < $1.session.startDate }
-        
-        guard sorted.count >= 5 else { return nil }
-        
-        let firstFive = sorted.prefix(5).map { $0.stats.averageHR }
-        let lastFive = sorted.suffix(5).map { $0.stats.averageHR }
-        
-        let earlyAvg = firstFive.reduce(0, +) / Double(firstFive.count)
-        let recentAvg = lastFive.reduce(0, +) / Double(lastFive.count)
-        
-        guard earlyAvg > 0 else { return nil }
-        
-        let change = (recentAvg - earlyAvg) / earlyAvg
-        return AcclimationSignal(
-            percentChange: change * 100,
-            direction: change < -0.03 ? .improving : .stable,
-            sessionCount: sorted.count
-        )
-    }
-    
     // MARK: - Full Analysis
     
     /// Perform complete analysis with current filters
@@ -318,9 +299,13 @@ final class AnalysisCalculator {
         
         // Create mapping from date to session for navigation
         let sessionMap = Dictionary(uniqueKeysWithValues: filtered.map { ($0.session.startDate, $0) })
-        
-        // Calculate acclimation (needs enough historical data)
-        let acclimation = calculateAcclimation(sessions: filtered)
+
+        // Calculate acclimation (only meaningful when filtering by a specific temperature bucket)
+        let acclimation: AcclimationSignal? = if let bucket = filters.temperatureBucket {
+            trendCalculator.calculateAcclimation(sessions: sessions, bucket: bucket)
+        } else {
+            nil
+        }
         
         return AnalysisResult(
             filters: filters,
