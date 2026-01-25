@@ -8,12 +8,12 @@
 import SwiftUI
 
 struct FilterPillRow: View {
-    @Binding var selectedTemperature: TemperatureBucket?
+    @Binding var selectedTemperatureBucket: TemperatureBucket?
     @Binding var selectedClassType: UUID?
     @Environment(UserSettings.self) var settings
 
     var hasActiveFilters: Bool {
-        selectedTemperature != nil || selectedClassType != nil
+        selectedTemperatureBucket != nil || selectedClassType != nil
     }
 
     var body: some View {
@@ -22,19 +22,19 @@ struct FilterPillRow: View {
                 // Temperature filter pill
                 Menu {
                     Button("All Temperatures") {
-                        selectedTemperature = nil
+                        selectedTemperatureBucket = nil
                     }
                     Divider()
                     ForEach(TemperatureBucket.allCases, id: \.self) { bucket in
                         Button(bucket.displayName) {
-                            selectedTemperature = bucket
+                            selectedTemperatureBucket = bucket
                         }
                     }
                 } label: {
                     FilterPill(
-                        title: selectedTemperature?.displayName ?? "Temperature",
-                        isActive: selectedTemperature != nil,
-                        icon: SFSymbol.thermometer
+                        title: selectedTemperatureBucket?.displayName ?? "Temperature",
+                        isActive: selectedTemperatureBucket != nil,
+                        icon: selectedTemperatureBucket == .unheated ? "thermometer.low" : SFSymbol.thermometer
                     )
                 }
 
@@ -61,7 +61,7 @@ struct FilterPillRow: View {
                 if hasActiveFilters {
                     Button {
                         withAnimation {
-                            selectedTemperature = nil
+                            selectedTemperatureBucket = nil
                             selectedClassType = nil
                         }
                     } label: {
@@ -110,12 +110,12 @@ struct FilterPill: View {
 #Preview {
     VStack {
         FilterPillRow(
-            selectedTemperature: .constant(nil),
+            selectedTemperatureBucket: .constant(nil),
             selectedClassType: .constant(nil)
         )
 
         FilterPillRow(
-            selectedTemperature: .constant(.hot),
+            selectedTemperatureBucket: .constant(.hot),
             selectedClassType: .constant(nil)
         )
     }

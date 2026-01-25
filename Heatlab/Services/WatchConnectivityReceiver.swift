@@ -2,8 +2,11 @@
 //  WatchConnectivityReceiver.swift
 //  heatlab
 //
-//  Receives relayed session data from Watch via WatchConnectivity
-//  This is an optional fast-lane - CloudKit sync is the primary mechanism
+//  Receives session data from Watch via WatchConnectivity dual-path:
+//  - Fast lane: sendMessage (when both apps active)
+//  - Slow lane: transferUserInfo (queued, survives app termination)
+//
+//  Sends ACKs back to Watch so it can clean up its outbox.
 //
 
 import WatchConnectivity
@@ -11,8 +14,7 @@ import SwiftData
 import Foundation
 import Combine
 
-/// Receives session data relayed from Watch for faster sync
-/// This is a "fast lane" optimization - CloudKit handles the authoritative sync
+/// Receives session data from Watch and sends ACKs for reliable delivery
 final class WatchConnectivityReceiver: NSObject, ObservableObject {
     static let shared = WatchConnectivityReceiver()
     
@@ -65,34 +67,49 @@ final class WatchConnectivityReceiver: NSObject, ObservableObject {
     
     // MARK: - Private Helpers
     
-    private func handleReceivedSession(_ data: [String: Any]) {
+    /// Handle received session data and send ACK on success
+    /// - Parameter data: Session dictionary from Watch
+    /// - Parameter sendAck: Whether to send ACK back to Watch (default true)
+    private func handleReceivedSession(_ data: [String: Any], sendAck: Bool = true) {
         guard let modelContext = modelContext else {
             print("ModelContext not configured for WatchConnectivityReceiver")
             return
         }
         
-        guard let idString = data["id"] as? String,
-              let id = UUID(uuidString: idString),
+        // Required fields - workoutUUID is now the primary key for upserts
+        guard let workoutUUIDString = data["workoutUUID"] as? String,
+              let workoutUUID = UUID(uuidString: workoutUUIDString),
               let startDateTimestamp = data["startDate"] as? TimeInterval,
-              let roomTemperature = data["roomTemperature"] as? Int else {
-            print("Invalid session data received")
+              let incomingUpdatedAtTimestamp = data["updatedAt"] as? TimeInterval else {
+            print("Invalid session data received - missing required fields (workoutUUID, startDate, updatedAt)")
             return
         }
         
-        // Check if session already exists
-        let predicate = #Predicate<HeatSession> { $0.id == id }
-        let descriptor = FetchDescriptor<HeatSession>(predicate: predicate)
+        let incomingUpdatedAt = Date(timeIntervalSince1970: incomingUpdatedAtTimestamp)
+        
+        // Optional fields - roomTemperature nil means unheated
+        let roomTemperature = data["roomTemperature"] as? Int
+        
+        // Upsert by workoutUUID (the unique constraint)
+        let predicate = #Predicate<WorkoutSession> { $0.workoutUUID == workoutUUID }
+        let descriptor = FetchDescriptor<WorkoutSession>(predicate: predicate)
         
         do {
             let existing = try modelContext.fetch(descriptor)
             
             if let existingSession = existing.first {
-                // Update existing session
-                updateSession(existingSession, from: data)
+                // Only update if incoming data is newer
+                if incomingUpdatedAt > existingSession.updatedAt {
+                    updateSession(existingSession, from: data, roomTemperature: roomTemperature)
+                    print("Updated session \(workoutUUID) - incoming updatedAt \(incomingUpdatedAt) > existing \(existingSession.updatedAt)")
+                } else {
+                    print("Skipped update for session \(workoutUUID) - incoming updatedAt \(incomingUpdatedAt) <= existing \(existingSession.updatedAt)")
+                }
             } else {
                 // Create new session
-                let session = createSession(from: data, id: id, startDate: Date(timeIntervalSince1970: startDateTimestamp), roomTemperature: roomTemperature)
+                let session = createSession(from: data, workoutUUID: workoutUUID, startDate: Date(timeIntervalSince1970: startDateTimestamp), roomTemperature: roomTemperature)
                 modelContext.insert(session)
+                print("Created new session for workoutUUID \(workoutUUID)")
             }
             
             try modelContext.save()
@@ -100,16 +117,45 @@ final class WatchConnectivityReceiver: NSObject, ObservableObject {
             DispatchQueue.main.async {
                 self.lastReceivedDate = Date()
             }
+            
+            // Send ACK to Watch so it can clean up its outbox
+            if sendAck {
+                sendAckToWatch(workoutUUID: workoutUUIDString)
+            }
         } catch {
             print("Failed to save received session: \(error.localizedDescription)")
         }
     }
     
-    private func createSession(from data: [String: Any], id: UUID, startDate: Date, roomTemperature: Int) -> HeatSession {
-        let session = HeatSession(startDate: startDate, roomTemperature: roomTemperature)
-        session.id = id
+    /// Send ACK message to Watch for outbox cleanup
+    private func sendAckToWatch(workoutUUID: String) {
+        guard let session = session, session.isReachable else {
+            print("Watch not reachable for ACK - outbox will retry")
+            return
+        }
         
-        updateSession(session, from: data)
+        let ackMessage: [String: Any] = [
+            "type": "ack",
+            "workoutUUID": workoutUUID
+        ]
+        
+        session.sendMessage(ackMessage, replyHandler: nil) { error in
+            print("Failed to send ACK to Watch: \(error.localizedDescription)")
+            // Watch outbox will retry via transferUserInfo, eventually connectivity will align
+        }
+        
+        print("Sent ACK to Watch for workoutUUID \(workoutUUID)")
+    }
+    
+    private func createSession(from data: [String: Any], workoutUUID: UUID, startDate: Date, roomTemperature: Int?) -> WorkoutSession {
+        let session = WorkoutSession(workoutUUID: workoutUUID, startDate: startDate, roomTemperature: roomTemperature)
+        
+        // Override id if provided (for cross-device consistency)
+        if let idString = data["id"] as? String, let id = UUID(uuidString: idString) {
+            session.id = id
+        }
+        
+        updateSession(session, from: data, roomTemperature: roomTemperature)
         
         // Mark as synced since it came from Watch via relay
         session.syncState = .synced
@@ -117,14 +163,14 @@ final class WatchConnectivityReceiver: NSObject, ObservableObject {
         return session
     }
     
-    private func updateSession(_ session: HeatSession, from data: [String: Any]) {
+    private func updateSession(_ session: WorkoutSession, from data: [String: Any], roomTemperature: Int?) {
+        // Update roomTemperature (nil means unheated)
+        session.roomTemperature = roomTemperature
+        
         if let endDateTimestamp = data["endDate"] as? TimeInterval {
             session.endDate = Date(timeIntervalSince1970: endDateTimestamp)
         }
-        if let workoutUUIDString = data["workoutUUID"] as? String,
-           let workoutUUID = UUID(uuidString: workoutUUIDString) {
-            session.workoutUUID = workoutUUID
-        }
+        // workoutUUID is immutable after creation - it's the unique key
         if let sessionTypeIdString = data["sessionTypeId"] as? String,
            let sessionTypeId = UUID(uuidString: sessionTypeIdString) {
             session.sessionTypeId = sessionTypeId
@@ -188,7 +234,7 @@ extension WatchConnectivityReceiver: WCSessionDelegate {
         print("WCSession reachability changed: \(session.isReachable)")
     }
     
-    // Handle messages from Watch
+    // Handle messages from Watch (fast lane)
     func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
         print("Received message from Watch: \(message)")
         
@@ -201,10 +247,21 @@ extension WatchConnectivityReceiver: WCSessionDelegate {
         print("Received message from Watch (with reply): \(message)")
         
         if let type = message["type"] as? String, type == "session" {
-            handleReceivedSession(message)
+            // Fast lane with reply - ACK is implicit in the reply, but we still send explicit ACK
+            // for consistency (in case watch processes reply handler failure)
+            handleReceivedSession(message, sendAck: true)
             replyHandler(["status": "saved"])
         } else {
             replyHandler(["status": "unknown_type"])
+        }
+    }
+    
+    // Handle transferUserInfo from Watch (slow lane - reliable delivery)
+    func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any]) {
+        print("Received userInfo from Watch (slow lane): \(userInfo.keys)")
+        
+        if let type = userInfo["type"] as? String, type == "session" {
+            handleReceivedSession(userInfo, sendAck: true)
         }
     }
 }

@@ -26,6 +26,7 @@ struct SessionDetailView: View {
     // Edit state
     @State private var editedDuration: TimeInterval = 0
     @State private var maxDuration: TimeInterval = 0
+    @State private var editedIsHeated: Bool = true
     @State private var editedTemperature: Int = 95
     @State private var editedSessionTypeId: UUID?
     @State private var editedNotes: String = ""
@@ -96,11 +97,20 @@ struct SessionDetailView: View {
                         value: formatDuration(session.stats.duration),
                         systemIcon: SFSymbol.clock
                     )
-                    StatCard(
-                        title: "Temperature",
-                        value: Temperature(fahrenheit: session.session.roomTemperature).formatted(unit: settings.temperatureUnit),
-                        systemIcon: SFSymbol.thermometer
-                    )
+                    // Temperature or heated status
+                    if let temp = session.session.roomTemperature {
+                        StatCard(
+                            title: "Temperature",
+                            value: Temperature(fahrenheit: temp).formatted(unit: settings.temperatureUnit),
+                            systemIcon: SFSymbol.thermometer
+                        )
+                    } else {
+                        StatCard(
+                            title: "Temperature",
+                            value: "--",
+                            systemIcon: SFSymbol.thermometer
+                        )
+                    }
                     StatCard(
                         title: "Avg HR",
                         value: session.stats.averageHR > 0 ? "\(Int(session.stats.averageHR)) bpm" : "--",
@@ -179,22 +189,6 @@ struct SessionDetailView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .heatLabSecondaryCard()
-                
-                // Delete button
-                Button(role: .destructive) {
-                    showingDeleteConfirmation = true
-                } label: {
-                    HStack {
-                        Spacer()
-                        Image(systemName: SFSymbol.trash)
-                        Text("Delete Session")
-                        Spacer()
-                    }
-                    .padding()
-                    .background(Color.red.opacity(0.1))
-                    .foregroundStyle(.red)
-                    .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.md))
-                }
             }
     }
 
@@ -207,48 +201,60 @@ struct SessionDetailView: View {
                 selectedDuration: $editedDuration
             )
             
-            // Temperature Editor
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Temperature")
-                    .font(.headline)
-
-                HStack(spacing: 0) {
-                    Picker("Temperature", selection: $editedTemperature) {
-                        ForEach(70...120, id: \.self) { temp in
-                            Text("\(temp)°").tag(temp)
-                        }
-                    }
-                    .pickerStyle(.wheel)
-                    .frame(width: 80, height: 120)
-                    .clipped()
-                    .onChange(of: editedTemperature) { _, _ in
-                        hapticGenerator?.impactOccurred()
-                    }
-
-                    Spacer()
-
-                    // Visual temperature indicator
-                    VStack(spacing: 12) {
-                        Image(systemName: "thermometer.medium")
-                            .font(.system(size: 40))
-                            .foregroundStyle(temperatureColor(for: editedTemperature))
-
-                        Text("\(editedTemperature)°\(settings.temperatureUnit == .fahrenheit ? "F" : "C")")
-                            .font(.system(.title, design: .rounded, weight: .bold))
-                            .foregroundStyle(temperatureColor(for: editedTemperature))
-
-                        Text(temperatureLabel(for: editedTemperature))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
+            // Heated Toggle
+            Toggle("Heated Session", isOn: $editedIsHeated.animation(.easeInOut(duration: 0.2)))
+                .tint(Color.HeatLab.coral)
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 16)
                         .fill(Color(.systemBackground))
                         .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
                 )
+            
+            // Temperature Editor (only shown when heated)
+            if editedIsHeated {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Temperature")
+                        .font(.headline)
+
+                    HStack(spacing: 0) {
+                        Picker("Temperature", selection: $editedTemperature) {
+                            ForEach(70...120, id: \.self) { temp in
+                                Text("\(temp)°").tag(temp)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(width: 80, height: 120)
+                        .clipped()
+                        .onChange(of: editedTemperature) { _, _ in
+                            hapticGenerator?.impactOccurred()
+                        }
+
+                        Spacer()
+
+                        // Visual temperature indicator
+                        VStack(spacing: 12) {
+                            Image(systemName: "thermometer.medium")
+                                .font(.system(size: 40))
+                                .foregroundStyle(temperatureColor(for: editedTemperature))
+
+                            Text("\(editedTemperature)°\(settings.temperatureUnit == .fahrenheit ? "F" : "C")")
+                                .font(.system(.title, design: .rounded, weight: .bold))
+                                .foregroundStyle(temperatureColor(for: editedTemperature))
+
+                            Text(temperatureLabel(for: editedTemperature))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(.systemBackground))
+                            .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                    )
+                }
             }
             
             // Session Type Editor
@@ -366,7 +372,9 @@ struct SessionDetailView: View {
         // Start with current duration (which may already be clipped)
         editedDuration = session.stats.duration
 
-        editedTemperature = session.session.roomTemperature
+        // Heated is determined by presence of temperature
+        editedIsHeated = session.session.roomTemperature != nil
+        editedTemperature = session.session.roomTemperature ?? 95
         editedSessionTypeId = session.session.sessionTypeId
         editedNotes = session.session.userNotes ?? ""
         editedPerceivedEffort = session.session.perceivedEffort
@@ -390,8 +398,10 @@ struct SessionDetailView: View {
             session.session.manualDurationOverride = nil
         }
 
+        // Update temperature (nil means unheated)
+        session.session.roomTemperature = editedIsHeated ? editedTemperature : nil
+        
         // Update other fields
-        session.session.roomTemperature = editedTemperature
         session.session.sessionTypeId = editedSessionTypeId
         session.session.userNotes = editedNotes.isEmpty ? nil : editedNotes
         session.session.perceivedEffort = editedPerceivedEffort
@@ -554,7 +564,7 @@ struct SessionDetailView: View {
         SessionDetailView(
             session: SessionWithStats(
                 session: {
-                    let s = HeatSession(startDate: Date(), roomTemperature: 102)
+                    let s = WorkoutSession(workoutUUID: UUID(), startDate: Date(), roomTemperature: 102)
                     s.sessionTypeId = SessionTypeConfig.DefaultTypeID.heatedVinyasa
                     s.aiSummary = "Great session! You maintained a strong, consistent effort throughout this heated vinyasa class. Your heart rate stayed in your typical range for 102°F sessions."
                     return s
@@ -562,7 +572,7 @@ struct SessionDetailView: View {
                 workout: nil,
                 stats: SessionStats(averageHR: 145, maxHR: 168, minHR: 95, calories: 387, duration: 2732)
             ),
-            baselineEngine: BaselineEngine(modelContext: try! ModelContainer(for: HeatSession.self).mainContext)
+            baselineEngine: BaselineEngine(modelContext: try! ModelContainer(for: WorkoutSession.self).mainContext)
         )
     }
     .environment(UserSettings())

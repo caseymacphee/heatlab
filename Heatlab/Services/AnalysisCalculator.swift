@@ -12,41 +12,63 @@ import Foundation
 
 /// Time period for comparisons
 enum AnalysisPeriod: String, CaseIterable, Identifiable {
-    case week = "Week"
-    case month = "Month"
-    case year = "Year"
+    case week = "7D"
+    case month = "1M"
+    case threeMonth = "3M"
+    case year = "1Y"
     
     var id: String { rawValue }
     
     var comparisonLabel: String {
         switch self {
         case .week: return "vs Previous 7 Days"
-        case .month: return "vs Last Month"
-        case .year: return "vs Last Year"
+        case .month: return "vs Previous Month"
+        case .threeMonth: return "vs Previous 3 Months"
+        case .year: return "vs Previous Year"
         }
     }
 
     var currentLabel: String {
         switch self {
-        case .week: return "Last 7 Days"
-        case .month: return "This Month"
-        case .year: return "This Year"
+        case .week: return "Past 7 Days"
+        case .month: return "Past Month"
+        case .threeMonth: return "Past 3 Months"
+        case .year: return "Past Year"
         }
     }
 
     var previousLabel: String {
         switch self {
         case .week: return "Previous 7 Days"
-        case .month: return "Last Month"
-        case .year: return "Last Year"
+        case .month: return "Previous Month"
+        case .threeMonth: return "Previous 3 Months"
+        case .year: return "Previous Year"
         }
+    }
+    
+    /// Whether this period requires Pro subscription
+    var requiresPro: Bool {
+        switch self {
+        case .week: return false
+        case .month, .threeMonth, .year: return true
+        }
+    }
+    
+    /// Periods available for free users
+    static var freePeriods: [AnalysisPeriod] {
+        [.week]
+    }
+    
+    /// Check if a period is available for the given subscription status
+    static func isAvailable(_ period: AnalysisPeriod, isPro: Bool) -> Bool {
+        isPro || !period.requiresPro
     }
 }
 
 /// Filters for slicing analysis data
 struct AnalysisFilters: Equatable {
-    var temperatureBucket: TemperatureBucket?  // nil = all temperatures
-    var sessionTypeId: UUID?                    // nil = all class types
+    var temperatureBucket: TemperatureBucket?  // nil = all temperatures (including unheated)
+    var sessionTypeId: UUID?                   // nil = all class types
     var period: AnalysisPeriod = .week
     
     static let `default` = AnalysisFilters(temperatureBucket: nil, sessionTypeId: nil, period: .week)
@@ -150,7 +172,7 @@ final class AnalysisCalculator {
     
     // MARK: - Filtering
     
-    /// Filter sessions by temperature bucket and/or class type
+    /// Filter sessions by temperature bucket and class type
     func filterSessions(_ sessions: [SessionWithStats], with filters: AnalysisFilters) -> [SessionWithStats] {
         sessions.filter { session in
             // Filter by temperature bucket if specified
@@ -173,17 +195,20 @@ final class AnalysisCalculator {
     // MARK: - Period Calculations
     
     /// Get the date range for a period with optional offset (0 = current, 1 = previous, etc.)
+    /// Uses start of day for day-based periods to ensure full days are included
     func periodDateRange(for period: AnalysisPeriod, offset: Int = 0) -> (start: Date, end: Date) {
         let now = Date()
+        let startOfToday = calendar.startOfDay(for: now)
         
         switch period {
         case .week:
             // Use rolling 7-day periods (not calendar week) for consistency with Dashboard
-            // offset=0: last 7 days (now - 7 days to now)
-            // offset=1: previous 7 days (now - 14 days to now - 7 days)
+            // Uses start of day to ensure full 7th day is included
+            // offset=0: Past 7 Days (start of day 7 days ago to now)
+            // offset=1: previous 7 days (start of day 14 days ago to start of day 7 days ago)
             let daysBack = 7 * (offset + 1)
-            let periodEnd = calendar.date(byAdding: .day, value: -7 * offset, to: now) ?? now
-            let periodStart = calendar.date(byAdding: .day, value: -daysBack, to: now) ?? now
+            let periodEnd = offset == 0 ? now : calendar.date(byAdding: .day, value: -7 * offset, to: startOfToday) ?? startOfToday
+            let periodStart = calendar.date(byAdding: .day, value: -daysBack, to: startOfToday) ?? startOfToday
             return (periodStart, min(periodEnd, now))
             
         case .month:
@@ -197,13 +222,23 @@ final class AnalysisCalculator {
             let finalEnd = min(periodEnd, now)
             return (periodStart, finalEnd)
             
+        case .threeMonth:
+            // Rolling 3-month periods
+            // offset=0: 3 months ago to today
+            // offset=1: 6 months ago to 3 months ago
+            let periodEnd = offset == 0 ? now : calendar.date(byAdding: .month, value: -3 * offset, to: now) ?? now
+            let periodStart = calendar.date(byAdding: .month, value: -3 * (offset + 1), to: now) ?? now
+            let finalEnd = min(periodEnd, now)
+            return (periodStart, finalEnd)
+            
         case .year:
-            guard let yearStart = calendar.dateInterval(of: .year, for: now)?.start else {
-                return (now, now)
-            }
-            let adjustedStart = calendar.date(byAdding: .year, value: -offset, to: yearStart)!
-            let adjustedEnd = calendar.date(byAdding: .year, value: 1, to: adjustedStart)!
-            return (adjustedStart, min(adjustedEnd, now))
+            // Rolling year periods (not calendar year)
+            // offset=0: 1 year ago to today
+            // offset=1: 2 years ago to 1 year ago
+            let periodEnd = offset == 0 ? now : calendar.date(byAdding: .year, value: -offset, to: now) ?? now
+            let periodStart = calendar.date(byAdding: .year, value: -(offset + 1), to: now) ?? now
+            let finalEnd = min(periodEnd, now)
+            return (periodStart, finalEnd)
         }
     }
     
@@ -240,7 +275,9 @@ final class AnalysisCalculator {
         let avgHeartRate = sessionsWithHR.isEmpty ? 0 : sessionsWithHR.reduce(0) { $0 + $1.stats.averageHR } / Double(sessionsWithHR.count)
         let maxHeartRate = sessionsWithHR.map { $0.stats.maxHR }.max() ?? 0
 
-        let avgTemperature = periodSessions.reduce(0.0) { $0 + Double($1.session.roomTemperature) } / Double(periodSessions.count)
+        // Only include sessions with temperature data in temperature average
+        let sessionsWithTemp = periodSessions.filter { $0.session.roomTemperature != nil }
+        let avgTemperature = sessionsWithTemp.isEmpty ? 0 : sessionsWithTemp.reduce(0.0) { $0 + Double($1.session.roomTemperature!) } / Double(sessionsWithTemp.count)
         
         return PeriodStats(
             periodStart: start,
@@ -273,13 +310,17 @@ final class AnalysisCalculator {
         
         let periodSessions = sessions
             .filter { $0.session.startDate >= start && $0.session.startDate < end }
+            .filter { $0.stats.averageHR > 0 }  // Exclude sessions with 0 heart rate
             .sorted { $0.session.startDate < $1.session.startDate }
         
         return periodSessions.map { session in
             TrendPoint(
                 date: session.session.startDate,
                 value: session.stats.averageHR,
-                temperature: session.session.roomTemperature
+                temperature: session.session.roomTemperature ?? 0,
+                duration: session.stats.duration,
+                temperatureBucket: session.session.temperatureBucket,
+                sessionTypeId: session.session.sessionTypeId
             )
         }
     }
@@ -287,28 +328,39 @@ final class AnalysisCalculator {
     // MARK: - Full Analysis
     
     /// Perform complete analysis with current filters
-    func analyze(sessions: [SessionWithStats], filters: AnalysisFilters) -> AnalysisResult {
+    /// - Parameters:
+    ///   - sessions: All available sessions
+    ///   - filters: Analysis filters including period
+    ///   - isPro: Whether user has Pro subscription (affects available periods)
+    /// - Returns: Analysis result with period comparison and trends
+    func analyze(sessions: [SessionWithStats], filters: AnalysisFilters, isPro: Bool = true) -> AnalysisResult {
+        // Enforce period restriction for free users
+        var effectiveFilters = filters
+        if !isPro && filters.period.requiresPro {
+            effectiveFilters.period = .week
+        }
+        
         // First filter by dimensions (temp, class type)
-        let filtered = filterSessions(sessions, with: filters)
+        let filtered = filterSessions(sessions, with: effectiveFilters)
         
         // Calculate period comparison
-        let comparison = comparePeriods(sessions: filtered, period: filters.period)
+        let comparison = comparePeriods(sessions: filtered, period: effectiveFilters.period)
         
         // Calculate trend points for chart
-        let trendPoints = calculateTrend(sessions: filtered, filters: filters)
+        let trendPoints = calculateTrend(sessions: filtered, filters: effectiveFilters)
         
         // Create mapping from date to session for navigation
         let sessionMap = Dictionary(uniqueKeysWithValues: filtered.map { ($0.session.startDate, $0) })
 
         // Calculate acclimation (only meaningful when filtering by a specific temperature bucket)
-        let acclimation: AcclimationSignal? = if let bucket = filters.temperatureBucket {
+        let acclimation: AcclimationSignal? = if let bucket = effectiveFilters.temperatureBucket {
             trendCalculator.calculateAcclimation(sessions: sessions, bucket: bucket)
         } else {
             nil
         }
         
         return AnalysisResult(
-            filters: filters,
+            filters: effectiveFilters,
             comparison: comparison,
             trendPoints: trendPoints,
             acclimation: acclimation,

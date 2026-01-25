@@ -6,11 +6,15 @@
 //
 
 import SwiftUI
+import StoreKit
 
 struct SettingsView: View {
     @Environment(UserSettings.self) var settings
+    @Environment(SubscriptionManager.self) var subscriptionManager
     @State private var showingAddTypeAlert = false
     @State private var newTypeName = ""
+    @State private var showingPaywall = false
+    @State private var isRestoring = false
     
     /// Send current settings to Watch
     private func syncSettingsToWatch() {
@@ -21,6 +25,86 @@ struct SettingsView: View {
         @Bindable var settings = settings
         
         List {
+            // Subscription Section
+            Section {
+                if subscriptionManager.isPro {
+                    // Pro status row
+                    HStack {
+                        Label {
+                            Text("Heatlab Pro")
+                        } icon: {
+                            Image(systemName: "checkmark.seal.fill")
+                                .foregroundStyle(Color.HeatLab.coral)
+                        }
+                        Spacer()
+                        Text("Active")
+                            .foregroundStyle(.secondary)
+                    }
+                    
+                    // Manage subscription link
+                    Button {
+                        Task {
+                            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                                try? await AppStore.showManageSubscriptions(in: windowScene)
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Text("Manage Subscription")
+                            Spacer()
+                            Image(systemName: SFSymbol.externalLink)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } else {
+                    // Upgrade prompt
+                    Button {
+                        showingPaywall = true
+                    } label: {
+                        HStack {
+                            Label {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Upgrade to Pro")
+                                        .foregroundStyle(.primary)
+                                    Text("Unlimited history, AI insights & more")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            } icon: {
+                                Image(systemName: "flame.fill")
+                                    .foregroundStyle(Color.HeatLab.coral)
+                            }
+                            Spacer()
+                            Image(systemName: SFSymbol.chevronRight)
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+                
+                // Restore purchases
+                Button {
+                    isRestoring = true
+                    Task {
+                        await subscriptionManager.restorePurchases()
+                        isRestoring = false
+                    }
+                } label: {
+                    HStack {
+                        Text("Restore Purchases")
+                        Spacer()
+                        if isRestoring {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        }
+                    }
+                }
+                .disabled(isRestoring)
+            } header: {
+                Text("Subscription")
+            }
+            
             // Temperature Unit Section
             Section {
                 Picker("Temperature Unit", selection: $settings.temperatureUnit) {
@@ -90,7 +174,30 @@ struct SettingsView: View {
                     HStack {
                         Text("MacPhee Labs")
                         Spacer()
-                        Image(systemName: "arrow.up.right.square")
+                        Image(systemName: SFSymbol.externalLink)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            
+            // Legal Section
+            Section("Legal") {
+                Link(destination: URL(string: "https://macpheelabs.com/heatlab/terms")!) {
+                    HStack {
+                        Text("Terms of Use")
+                        Spacer()
+                        Image(systemName: SFSymbol.externalLink)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                
+                Link(destination: URL(string: "https://macpheelabs.com/heatlab/privacy")!) {
+                    HStack {
+                        Text("Privacy Policy")
+                        Spacer()
+                        Image(systemName: SFSymbol.externalLink)
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -98,6 +205,9 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingPaywall) {
+            PaywallView()
+        }
         .alert("Add Custom Type", isPresented: $showingAddTypeAlert) {
             TextField("Type Name", text: $newTypeName)
             Button("Cancel", role: .cancel) { }
@@ -166,5 +276,6 @@ private struct SessionTypeRow: View {
         SettingsView()
     }
     .environment(UserSettings())
+    .environment(SubscriptionManager())
 }
 

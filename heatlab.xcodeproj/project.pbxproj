@@ -8,13 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		3C766A4D2F1400F100309D3D /* HeatlabWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 3C766A2D2F1400EF00309D3D /* HeatlabWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		3C766B0D2F1520F400309D3D /* HeatSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B052F1520F400309D3D /* HeatSession.swift */; };
+		3C766B0D2F1520F400309D3D /* WorkoutSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B052F1520F400309D3D /* WorkoutSession.swift */; };
 		3C766B0E2F1520F400309D3D /* UserSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B0B2F1520F400309D3D /* UserSettings.swift */; };
 		3C766B0F2F1520F400309D3D /* UserBaseline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B072F1520F400309D3D /* UserBaseline.swift */; };
 		3C766B102F1520F400309D3D /* SessionStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B062F1520F400309D3D /* SessionStats.swift */; };
 		3C766B112F1520F400309D3D /* Temperature.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B0A2F1520F400309D3D /* Temperature.swift */; };
 		3C766B122F1520F400309D3D /* HeatLabModelContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B092F1520F400309D3D /* HeatLabModelContainer.swift */; };
-		3C766B132F1520F400309D3D /* HeatSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B052F1520F400309D3D /* HeatSession.swift */; };
+		3C766B132F1520F400309D3D /* WorkoutSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B052F1520F400309D3D /* WorkoutSession.swift */; };
 		3C766B142F1520F400309D3D /* UserSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B0B2F1520F400309D3D /* UserSettings.swift */; };
 		3C766B152F1520F400309D3D /* UserBaseline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B072F1520F400309D3D /* UserBaseline.swift */; };
 		3C766B162F1520F400309D3D /* SessionStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B062F1520F400309D3D /* SessionStats.swift */; };
@@ -30,6 +30,10 @@
 		3C769C052F1F000000309D3D /* HeatLabStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C769C022F1F000000309D3D /* HeatLabStyles.swift */; };
 		3C769C062F1F000000309D3D /* HeatLabTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C769C012F1F000000309D3D /* HeatLabTheme.swift */; };
 		3C769C072F1F000000309D3D /* HeatLabStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C769C022F1F000000309D3D /* HeatLabStyles.swift */; };
+		3C769D012F1F000100309D3D /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C769D002F1F000100309D3D /* SubscriptionManager.swift */; };
+		3C769D022F1F000100309D3D /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C769D002F1F000100309D3D /* SubscriptionManager.swift */; };
+		3C769D052F1F000200309D3D /* SubscriptionStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C769D042F1F000200309D3D /* SubscriptionStatus.swift */; };
+		3C769D062F1F000200309D3D /* SubscriptionStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C769D042F1F000200309D3D /* SubscriptionStatus.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -52,21 +56,21 @@
 			containerPortal = 3C7669F22F14000900309D3D /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 3C766A2C2F1400EF00309D3D;
-			remoteInfo = "Heatlab Watch Watch App";
+			remoteInfo = "HeatLab Watch Watch App";
 		};
 		3C766A442F1400F100309D3D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 3C7669F22F14000900309D3D /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 3C766A2C2F1400EF00309D3D;
-			remoteInfo = "Heatlab Watch Watch App";
+			remoteInfo = "HeatLab Watch Watch App";
 		};
 		3C766A4B2F1400F100309D3D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 3C7669F22F14000900309D3D /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 3C766A2C2F1400EF00309D3D;
-			remoteInfo = "Heatlab Watch Watch App";
+			remoteInfo = "HeatLab Watch Watch App";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -91,7 +95,7 @@
 		3C766A2D2F1400EF00309D3D /* HeatlabWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HeatlabWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C766A392F1400F100309D3D /* HeatlabWatchTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HeatlabWatchTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C766A432F1400F100309D3D /* HeatlabWatchUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HeatlabWatchUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		3C766B052F1520F400309D3D /* HeatSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatSession.swift; sourceTree = "<group>"; };
+		3C766B052F1520F400309D3D /* WorkoutSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSession.swift; sourceTree = "<group>"; };
 		3C766B062F1520F400309D3D /* SessionStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStats.swift; sourceTree = "<group>"; };
 		3C766B072F1520F400309D3D /* UserBaseline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserBaseline.swift; sourceTree = "<group>"; };
 		3C766B092F1520F400309D3D /* HeatLabModelContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatLabModelContainer.swift; sourceTree = "<group>"; };
@@ -102,6 +106,8 @@
 		3C769B5C2F1D8E9E000FAEAD /* HeatLabIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = HeatLabIcon.icon; sourceTree = "<group>"; };
 		3C769C012F1F000000309D3D /* HeatLabTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatLabTheme.swift; sourceTree = "<group>"; };
 		3C769C022F1F000000309D3D /* HeatLabStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatLabStyles.swift; sourceTree = "<group>"; };
+		3C769D002F1F000100309D3D /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
+		3C769D042F1F000200309D3D /* SubscriptionStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionStatus.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -237,9 +243,10 @@
 		3C766B082F1520F400309D3D /* Models */ = {
 			isa = PBXGroup;
 			children = (
-				3C766B052F1520F400309D3D /* HeatSession.swift */,
+				3C766B052F1520F400309D3D /* WorkoutSession.swift */,
 				3C766B062F1520F400309D3D /* SessionStats.swift */,
 				3C766B072F1520F400309D3D /* UserBaseline.swift */,
+				3C769D042F1F000200309D3D /* SubscriptionStatus.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -249,6 +256,7 @@
 			children = (
 				3C766B082F1520F400309D3D /* Models */,
 				3C769C032F1F000000309D3D /* Theme */,
+				3C769D032F1F000100309D3D /* Services */,
 				3C766B192F1520F400309D3D /* CloudKitStatus.swift */,
 				3C766B092F1520F400309D3D /* HeatLabModelContainer.swift */,
 				3C76993A2F1A9446000FAEAD /* SessionTypeConfig.swift */,
@@ -265,6 +273,14 @@
 				3C769C022F1F000000309D3D /* HeatLabStyles.swift */,
 			);
 			path = Theme;
+			sourceTree = "<group>";
+		};
+		3C769D032F1F000100309D3D /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				3C769D002F1F000100309D3D /* SubscriptionManager.swift */,
+			);
+			path = Services;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -358,7 +374,7 @@
 			name = HeatlabWatch;
 			packageProductDependencies = (
 			);
-			productName = "Heatlab Watch Watch App";
+			productName = "HeatLab Watch Watch App";
 			productReference = 3C766A2D2F1400EF00309D3D /* HeatlabWatch.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -381,7 +397,7 @@
 			name = HeatlabWatchTests;
 			packageProductDependencies = (
 			);
-			productName = "Heatlab Watch Watch AppTests";
+			productName = "HeatLab Watch Watch AppTests";
 			productReference = 3C766A392F1400F100309D3D /* HeatlabWatchTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
@@ -404,7 +420,7 @@
 			name = HeatlabWatchUITests;
 			packageProductDependencies = (
 			);
-			productName = "Heatlab Watch Watch AppUITests";
+			productName = "HeatLab Watch Watch AppUITests";
 			productReference = 3C766A432F1400F100309D3D /* HeatlabWatchUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
@@ -519,15 +535,17 @@
 			buildActionMask = 2147483647;
 			files = (
 				3C76993B2F1A9446000FAEAD /* SessionTypeConfig.swift in Sources */,
-				3C766B0D2F1520F400309D3D /* HeatSession.swift in Sources */,
+				3C766B0D2F1520F400309D3D /* WorkoutSession.swift in Sources */,
 				3C766B0E2F1520F400309D3D /* UserSettings.swift in Sources */,
 				3C766B0F2F1520F400309D3D /* UserBaseline.swift in Sources */,
 				3C766B102F1520F400309D3D /* SessionStats.swift in Sources */,
+				3C769D052F1F000200309D3D /* SubscriptionStatus.swift in Sources */,
 				3C766B112F1520F400309D3D /* Temperature.swift in Sources */,
 				3C766B122F1520F400309D3D /* HeatLabModelContainer.swift in Sources */,
 				3C766B1A2F1520F400309D3D /* CloudKitStatus.swift in Sources */,
 				3C769C042F1F000000309D3D /* HeatLabTheme.swift in Sources */,
 				3C769C052F1F000000309D3D /* HeatLabStyles.swift in Sources */,
+				3C769D012F1F000100309D3D /* SubscriptionManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -549,16 +567,18 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3C766B132F1520F400309D3D /* HeatSession.swift in Sources */,
+				3C766B132F1520F400309D3D /* WorkoutSession.swift in Sources */,
 				3C766B142F1520F400309D3D /* UserSettings.swift in Sources */,
 				3C766B152F1520F400309D3D /* UserBaseline.swift in Sources */,
 				3C766B162F1520F400309D3D /* SessionStats.swift in Sources */,
+				3C769D062F1F000200309D3D /* SubscriptionStatus.swift in Sources */,
 				3C766B172F1520F400309D3D /* Temperature.swift in Sources */,
 				3C76993C2F1A9446000FAEAD /* SessionTypeConfig.swift in Sources */,
 				3C766B182F1520F400309D3D /* HeatLabModelContainer.swift in Sources */,
 				3C766B1B2F1520F400309D3D /* CloudKitStatus.swift in Sources */,
 				3C769C062F1F000000309D3D /* HeatLabTheme.swift in Sources */,
 				3C769C072F1F000000309D3D /* HeatLabStyles.swift in Sources */,
+				3C769D022F1F000100309D3D /* SubscriptionManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -902,7 +922,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HeatlabWatch/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Heatlab Watch";
+				INFOPLIST_KEY_CFBundleDisplayName = "HeatLab Watch";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = macpheelabs.heatlab;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -937,7 +957,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HeatlabWatch/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Heatlab Watch";
+				INFOPLIST_KEY_CFBundleDisplayName = "HeatLab Watch";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = macpheelabs.heatlab;
 				LD_RUNPATH_SEARCH_PATHS = (

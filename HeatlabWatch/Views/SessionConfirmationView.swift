@@ -15,6 +15,7 @@ struct SessionConfirmationView: View {
     @Environment(\.modelContext) var modelContext
     @Environment(UserSettings.self) var settings
     @Environment(SyncEngine.self) var syncEngine
+    @State private var isHeated: Bool = true  // Default to heated session
     @State private var temperatureInput: Int = 95
     @State private var selectedTypeId: UUID?
     @State private var selectedEffort: PerceivedEffort = .moderate
@@ -79,15 +80,23 @@ struct SessionConfirmationView: View {
                 
                 Divider()
                 
-                // Temperature Dial (Digital Crown controlled)
-                Text("Room Temperature")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                // Heated Session Toggle
+                Toggle("Heated Session", isOn: $isHeated)
+                    .tint(Color.HeatLab.coral)
                 
-                TemperatureDialView(temperature: $temperatureInput, unit: settings.temperatureUnit)
-                    .frame(height: 100)
-                    .prefersDefaultFocus(in: temperatureDialNamespace)
-                    .padding(.bottom, 8)
+                // Temperature Dial (only shown when heated)
+                if isHeated {
+                    Divider()
+                    
+                    Text("Temperature")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    
+                    TemperatureDialView(temperature: $temperatureInput, unit: settings.temperatureUnit)
+                        .frame(height: 100)
+                        .prefersDefaultFocus(in: temperatureDialNamespace)
+                        .padding(.bottom, 4)
+                }
                 
                 Divider()
                 
@@ -164,13 +173,15 @@ struct SessionConfirmationView: View {
         guard !isSaving else { return }  // Prevent double-tap
         isSaving = true
         
-        // Convert user input to Fahrenheit for storage
-        let temp = Temperature.fromUserInput(temperatureInput, unit: settings.temperatureUnit)
+        // Determine temperature based on heated selection (nil = unheated)
+        let roomTemperature: Int? = isHeated
+            ? Temperature.fromUserInput(temperatureInput, unit: settings.temperatureUnit).fahrenheit
+            : nil
         
         // Create session with pending sync state
-        let session = HeatSession(startDate: workout.startDate, roomTemperature: temp.fahrenheit)
+        // workoutUUID is now required - it's the unique key for upserts
+        let session = WorkoutSession(workoutUUID: workout.uuid, startDate: workout.startDate, roomTemperature: roomTemperature)
         session.endDate = workout.endDate
-        session.workoutUUID = workout.uuid
         session.sessionTypeId = selectedTypeId
         session.perceivedEffort = selectedEffort
         // syncState is .pending by default - ready for background sync
@@ -179,8 +190,10 @@ struct SessionConfirmationView: View {
         
         do {
             try modelContext.save()
-            // Remember temperature for next session
-            settings.lastRoomTemperature = temperatureInput
+            // Remember temperature for next session (only if heated)
+            if isHeated {
+                settings.lastRoomTemperature = temperatureInput
+            }
 
             // Trigger background sync (fire and forget - don't block exit)
             Task {

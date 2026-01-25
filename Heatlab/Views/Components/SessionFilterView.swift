@@ -202,6 +202,7 @@ struct SessionFilterSheet: View {
 
     private func colorForBucket(_ bucket: TemperatureBucket) -> Color {
         switch bucket {
+        case .unheated: return .gray
         case .warm: return Color.HeatLab.tempWarm
         case .hot: return Color.HeatLab.tempHot
         case .veryHot: return Color.HeatLab.tempVeryHot
@@ -295,6 +296,7 @@ struct ActiveFiltersBar: View {
 
     private func colorForBucket(_ bucket: TemperatureBucket) -> Color {
         switch bucket {
+        case .unheated: return .gray
         case .warm: return Color.HeatLab.tempWarm
         case .hot: return Color.HeatLab.tempHot
         case .veryHot: return Color.HeatLab.tempVeryHot

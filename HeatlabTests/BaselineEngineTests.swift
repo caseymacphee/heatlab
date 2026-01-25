@@ -15,7 +15,7 @@ final class BaselineEngineTests: XCTestCase {
     var baselineEngine: BaselineEngine!
     
     override func setUpWithError() throws {
-        let schema = Schema([HeatSession.self, UserBaseline.self])
+        let schema = Schema([WorkoutSession.self, UserBaseline.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         modelContainer = try ModelContainer(for: schema, configurations: [config])
         modelContext = modelContainer.mainContext
@@ -54,10 +54,23 @@ final class BaselineEngineTests: XCTestCase {
         XCTAssertEqual(TemperatureBucket.from(temperature: 115), .extreme)
     }
     
+    func testTemperatureBucketUnheated() {
+        // Test that a session without temperature gets the unheated bucket
+        let session = WorkoutSession(workoutUUID: UUID(), startDate: Date(), roomTemperature: nil)
+        XCTAssertEqual(session.temperatureBucket, .unheated)
+    }
+    
     // MARK: - Baseline Update Tests
     
+    // MARK: - Test Helpers
+    
+    /// Creates a test heated session with a unique workoutUUID
+    private func makeTestSession(startDate: Date = Date(), roomTemperature: Int) -> WorkoutSession {
+        WorkoutSession(workoutUUID: UUID(), startDate: startDate, roomTemperature: roomTemperature)
+    }
+    
     func testUpdateBaselineCreatesNew() {
-        let session = HeatSession(startDate: Date(), roomTemperature: 102)
+        let session = makeTestSession(roomTemperature: 102)
         modelContext.insert(session)
         
         baselineEngine.updateBaseline(for: session, averageHR: 145)
@@ -70,12 +83,12 @@ final class BaselineEngineTests: XCTestCase {
     
     func testUpdateBaselineCalculatesRollingAverage() {
         // First session
-        let session1 = HeatSession(startDate: Date(), roomTemperature: 102)
+        let session1 = makeTestSession(roomTemperature: 102)
         modelContext.insert(session1)
         baselineEngine.updateBaseline(for: session1, averageHR: 140)
         
         // Second session
-        let session2 = HeatSession(startDate: Date(), roomTemperature: 103)
+        let session2 = makeTestSession(roomTemperature: 103)
         modelContext.insert(session2)
         baselineEngine.updateBaseline(for: session2, averageHR: 150)
         
@@ -86,7 +99,7 @@ final class BaselineEngineTests: XCTestCase {
     }
     
     func testUpdateBaselineIgnoresZeroHR() {
-        let session = HeatSession(startDate: Date(), roomTemperature: 102)
+        let session = makeTestSession(roomTemperature: 102)
         modelContext.insert(session)
         
         baselineEngine.updateBaseline(for: session, averageHR: 0)
@@ -98,7 +111,7 @@ final class BaselineEngineTests: XCTestCase {
     // MARK: - Baseline Comparison Tests
     
     func testCompareToBaselineInsufficientData() {
-        let session = HeatSession(startDate: Date(), roomTemperature: 102)
+        let session = makeTestSession(roomTemperature: 102)
         let sessionWithStats = SessionWithStats(
             session: session,
             workout: nil,
@@ -107,8 +120,8 @@ final class BaselineEngineTests: XCTestCase {
         
         let comparison = baselineEngine.compareToBaseline(session: sessionWithStats)
         
-        if case .insufficientData = comparison {
-            // Expected
+        if case .insufficientData(_, let bucket) = comparison {
+            XCTAssertEqual(bucket, .veryHot)
         } else {
             XCTFail("Expected insufficient data")
         }
@@ -117,13 +130,13 @@ final class BaselineEngineTests: XCTestCase {
     func testCompareToBaselineTypical() throws {
         // Build baseline with 3+ sessions
         for i in 0..<3 {
-            let session = HeatSession(startDate: Date().addingTimeInterval(TimeInterval(i * 86400)), roomTemperature: 102)
+            let session = makeTestSession(startDate: Date().addingTimeInterval(TimeInterval(i * 86400)), roomTemperature: 102)
             modelContext.insert(session)
             baselineEngine.updateBaseline(for: session, averageHR: 145)
         }
         
         // Test session within 5% of baseline
-        let testSession = HeatSession(startDate: Date(), roomTemperature: 102)
+        let testSession = makeTestSession(roomTemperature: 102)
         let sessionWithStats = SessionWithStats(
             session: testSession,
             workout: nil,
@@ -132,8 +145,8 @@ final class BaselineEngineTests: XCTestCase {
         
         let comparison = baselineEngine.compareToBaseline(session: sessionWithStats)
         
-        if case .typical = comparison {
-            // Expected
+        if case .typical(let bucket) = comparison {
+            XCTAssertEqual(bucket, .veryHot)
         } else {
             XCTFail("Expected typical comparison, got \(comparison)")
         }
@@ -142,13 +155,13 @@ final class BaselineEngineTests: XCTestCase {
     func testCompareToBaselineHigherEffort() throws {
         // Build baseline
         for i in 0..<3 {
-            let session = HeatSession(startDate: Date().addingTimeInterval(TimeInterval(i * 86400)), roomTemperature: 102)
+            let session = makeTestSession(startDate: Date().addingTimeInterval(TimeInterval(i * 86400)), roomTemperature: 102)
             modelContext.insert(session)
             baselineEngine.updateBaseline(for: session, averageHR: 140)
         }
         
         // Test session 10% above baseline
-        let testSession = HeatSession(startDate: Date(), roomTemperature: 102)
+        let testSession = makeTestSession(roomTemperature: 102)
         let sessionWithStats = SessionWithStats(
             session: testSession,
             workout: nil,
@@ -157,8 +170,9 @@ final class BaselineEngineTests: XCTestCase {
         
         let comparison = baselineEngine.compareToBaseline(session: sessionWithStats)
         
-        if case .higherEffort(let percent) = comparison {
+        if case .higherEffort(let percent, let bucket) = comparison {
             XCTAssertEqual(percent, 10, accuracy: 1)
+            XCTAssertEqual(bucket, .veryHot)
         } else {
             XCTFail("Expected higher effort comparison")
         }
@@ -167,13 +181,13 @@ final class BaselineEngineTests: XCTestCase {
     func testCompareToBaselineLowerEffort() throws {
         // Build baseline
         for i in 0..<3 {
-            let session = HeatSession(startDate: Date().addingTimeInterval(TimeInterval(i * 86400)), roomTemperature: 102)
+            let session = makeTestSession(startDate: Date().addingTimeInterval(TimeInterval(i * 86400)), roomTemperature: 102)
             modelContext.insert(session)
             baselineEngine.updateBaseline(for: session, averageHR: 150)
         }
         
         // Test session 10% below baseline
-        let testSession = HeatSession(startDate: Date(), roomTemperature: 102)
+        let testSession = makeTestSession(roomTemperature: 102)
         let sessionWithStats = SessionWithStats(
             session: testSession,
             workout: nil,
@@ -182,10 +196,36 @@ final class BaselineEngineTests: XCTestCase {
         
         let comparison = baselineEngine.compareToBaseline(session: sessionWithStats)
         
-        if case .lowerEffort(let percent) = comparison {
+        if case .lowerEffort(let percent, let bucket) = comparison {
             XCTAssertEqual(percent, 10, accuracy: 1)
+            XCTAssertEqual(bucket, .veryHot)
         } else {
             XCTFail("Expected lower effort comparison")
+        }
+    }
+    
+    func testCompareToBaselineUnheatedSession() throws {
+        // Build baseline with 3+ unheated sessions (roomTemperature = nil)
+        for i in 0..<3 {
+            let session = WorkoutSession(workoutUUID: UUID(), startDate: Date().addingTimeInterval(TimeInterval(i * 86400)), roomTemperature: nil)
+            modelContext.insert(session)
+            baselineEngine.updateBaseline(for: session, averageHR: 120)
+        }
+        
+        // Test unheated session
+        let testSession = WorkoutSession(workoutUUID: UUID(), startDate: Date(), roomTemperature: nil)
+        let sessionWithStats = SessionWithStats(
+            session: testSession,
+            workout: nil,
+            stats: SessionStats(averageHR: 122, maxHR: 140, minHR: 90, calories: 200, duration: 3600)
+        )
+        
+        let comparison = baselineEngine.compareToBaseline(session: sessionWithStats)
+        
+        if case .typical(let bucket) = comparison {
+            XCTAssertEqual(bucket, .unheated)
+        } else {
+            XCTFail("Expected typical comparison for unheated session, got \(comparison)")
         }
     }
 }

@@ -27,11 +27,8 @@ struct AIInsightSection: View {
         case .insufficientData(let needed):
             insufficientDataView(sessionsNeeded: needed)
         case .unavailable:
-            #if DEBUG
-            unavailableView
-            #else
+            // Hidden entirely - not useful even in debug builds
             EmptyView()
-            #endif
         }
     }
 

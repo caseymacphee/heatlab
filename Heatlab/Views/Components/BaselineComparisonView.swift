@@ -41,10 +41,11 @@ struct BaselineComparisonView: View {
 
 #Preview {
     VStack(spacing: 16) {
-        BaselineComparisonView(comparison: .typical)
-        BaselineComparisonView(comparison: .higherEffort(percentAbove: 12))
-        BaselineComparisonView(comparison: .lowerEffort(percentBelow: 8))
-        BaselineComparisonView(comparison: .insufficientData(sessionsNeeded: 2))
+        BaselineComparisonView(comparison: .typical(bucket: .veryHot))
+        BaselineComparisonView(comparison: .higherEffort(percentAbove: 12, bucket: .veryHot))
+        BaselineComparisonView(comparison: .lowerEffort(percentBelow: 8, bucket: .hot))
+        BaselineComparisonView(comparison: .insufficientData(sessionsNeeded: 2, bucket: .extreme))
+        BaselineComparisonView(comparison: .typical(bucket: .unheated))
     }
     .padding()
 }

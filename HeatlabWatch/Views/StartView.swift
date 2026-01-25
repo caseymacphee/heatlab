@@ -19,7 +19,7 @@ struct StartView: View {
                 .font(.system(size: 40))
                 .foregroundStyle(LinearGradient.heatLabPrimary)
             
-            Text("Heatlab")
+            Text("HeatLab")
                 .font(.title3.bold())
             
             Text("Track your Practice")

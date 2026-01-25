@@ -13,7 +13,6 @@ import SwiftUI
 struct SyncInfoView: View {
     @Environment(SyncEngine.self) var syncEngine
     @Environment(\.modelContext) var modelContext
-    @State private var isCloudAvailable = false
     
     var body: some View {
         ScrollView {
@@ -36,8 +35,8 @@ struct SyncInfoView: View {
                 
                 // Sync details
                 VStack(alignment: .leading, spacing: 8) {
-                    if syncEngine.totalPendingCount > 0 {
-                        Label("\(syncEngine.totalPendingCount) sessions pending", systemImage: "clock")
+                    if syncEngine.pendingSessionCount > 0 {
+                        Label("\(syncEngine.pendingSessionCount) session\(syncEngine.pendingSessionCount == 1 ? "" : "s") pending", systemImage: "clock")
                     }
                     
                     if let lastSync = syncEngine.lastSyncDate {
@@ -48,6 +47,13 @@ struct SyncInfoView: View {
                         Label(error, systemImage: "exclamationmark.triangle")
                             .foregroundStyle(.orange)
                     }
+                    
+                    // Phone reachability indicator
+                    Label(
+                        syncEngine.isPhoneReachable ? "iPhone connected" : "iPhone not reachable",
+                        systemImage: syncEngine.isPhoneReachable ? "iphone" : "iphone.slash"
+                    )
+                    .foregroundStyle(syncEngine.isPhoneReachable ? .green : .secondary)
                 }
                 .font(.caption)
                 
@@ -66,52 +72,43 @@ struct SyncInfoView: View {
                     }
                 }
                 .buttonStyle(.bordered)
-                .disabled(syncEngine.isSyncing)
+                .disabled(syncEngine.isSyncing || !syncEngine.isPhoneReachable)
                 .padding(.top, 8)
                 
-                // Help text for offline mode
-                if !isCloudAvailable {
+                // Help text when phone not reachable
+                if !syncEngine.isPhoneReachable && syncEngine.pendingSessionCount > 0 {
                     Divider()
                         .padding(.vertical, 4)
                     
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("To enable sync:")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        
-                        Label("Settings", systemImage: "gear")
-                        Label("Sign in", systemImage: "person.circle")
-                        Label("Enable iCloud", systemImage: "checkmark.icloud")
-                    }
-                    .font(.caption)
+                    Text("Sessions will sync automatically when your iPhone is nearby and the HeatLab app is running.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                 }
             }
             .padding()
         }
         .navigationTitle("Sync Status")
-        .task {
-            isCloudAvailable = await syncEngine.isCloudKitAvailable()
-        }
     }
     
     private var statusIcon: String {
         if syncEngine.isSyncing {
-            return "icloud.and.arrow.up"
-        } else if !isCloudAvailable {
-            return "icloud.slash"
-        } else if syncEngine.totalPendingCount > 0 {
-            return "icloud.and.arrow.up"
+            return "arrow.triangle.2.circlepath"
+        } else if !syncEngine.isPhoneReachable {
+            return "iphone.slash"
+        } else if syncEngine.pendingSessionCount > 0 {
+            return "arrow.triangle.2.circlepath"
         } else {
-            return "checkmark.icloud"
+            return "checkmark.circle"
         }
     }
     
     private var statusColor: Color {
         if syncEngine.isSyncing {
             return .blue
-        } else if !isCloudAvailable {
+        } else if !syncEngine.isPhoneReachable {
             return .orange
-        } else if syncEngine.totalPendingCount > 0 {
+        } else if syncEngine.pendingSessionCount > 0 {
             return .yellow
         } else {
             return .green
@@ -121,9 +118,9 @@ struct SyncInfoView: View {
     private var statusTitle: String {
         if syncEngine.isSyncing {
             return "Syncing..."
-        } else if !isCloudAvailable {
-            return "Offline Mode"
-        } else if syncEngine.totalPendingCount > 0 {
+        } else if !syncEngine.isPhoneReachable {
+            return "iPhone Not Reachable"
+        } else if syncEngine.pendingSessionCount > 0 {
             return "Sync Pending"
         } else {
             return "All Synced"
@@ -131,12 +128,12 @@ struct SyncInfoView: View {
     }
     
     private var statusDescription: String {
-        if !isCloudAvailable {
-            return "Sessions are saved locally. Sign into iCloud to sync with your iPhone."
-        } else if syncEngine.totalPendingCount > 0 {
-            return "Some sessions are waiting to sync. This happens automatically."
+        if !syncEngine.isPhoneReachable {
+            return "Sessions are saved locally. They'll sync when your iPhone is nearby."
+        } else if syncEngine.pendingSessionCount > 0 {
+            return "Some sessions are waiting to sync to your iPhone."
         } else {
-            return "All sessions are synced to iCloud and available on your iPhone."
+            return "All sessions are synced to your iPhone."
         }
     }
 }

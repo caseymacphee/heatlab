@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct TemperatureBadge: View {
-    /// Temperature in Fahrenheit (storage format)
-    let temperature: Int
+    /// Temperature in Fahrenheit (storage format) - nil for non-heated sessions
+    let temperature: Int?
     /// Display unit preference
     let unit: TemperatureUnit
     var size: BadgeSize = .regular
@@ -42,23 +42,18 @@ struct TemperatureBadge: View {
         }
     }
     
-    private var temp: Temperature {
-        Temperature(fahrenheit: temperature)
-    }
-    
     var body: some View {
-        Text(temp.formatted(unit: unit))
-            .font(size.font)
-            .padding(.horizontal, size.horizontalPadding)
-            .padding(.vertical, size.verticalPadding)
-            .background(backgroundColor.opacity(0.2))
-            .foregroundStyle(backgroundColor)
-            .clipShape(Capsule())
-    }
-    
-    /// Color based on Fahrenheit value (consistent regardless of display unit)
-    private var backgroundColor: Color {
-        Color.HeatLab.temperature(fahrenheit: temperature)
+        if let temp = temperature {
+            let tempValue = Temperature(fahrenheit: temp)
+            Text(tempValue.formatted(unit: unit))
+                .font(size.font)
+                .padding(.horizontal, size.horizontalPadding)
+                .padding(.vertical, size.verticalPadding)
+                .background(Color.HeatLab.temperature(fahrenheit: temp).opacity(0.2))
+                .foregroundStyle(Color.HeatLab.temperature(fahrenheit: temp))
+                .clipShape(Capsule())
+        }
+        // No badge shown for non-heated sessions
     }
 }
 
@@ -75,5 +70,14 @@ struct TemperatureBadge: View {
         TemperatureBadge(temperature: 85, unit: .celsius, size: .small)
         TemperatureBadge(temperature: 95, unit: .celsius)
         TemperatureBadge(temperature: 102, unit: .celsius, size: .large)
+        
+        Divider()
+        
+        Text("Non-heated (no badge)")
+        HStack {
+            Text("Before:")
+            TemperatureBadge(temperature: nil, unit: .fahrenheit)
+            Text("After")
+        }
     }
 }

@@ -10,38 +10,31 @@ import SwiftUI
 struct SessionRowView: View {
     @Environment(UserSettings.self) var settings
     let session: SessionWithStats
-    var useRelativeTime: Bool = false
+    
+    private var className: String {
+        settings.sessionTypeName(for: session.session.sessionTypeId) ?? "Session"
+    }
+    
+    private var timeString: String {
+        formatSessionDate(session.session.startDate)
+    }
     
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                // Date and class type with fixed positioning
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    // Fixed-width container for relative time to ensure consistent class type positioning
-                    Text(useRelativeTime ? relativeTimeString(for: session.session.startDate) : session.session.startDate.formatted(date: .abbreviated, time: .shortened))
-                        .font(.headline)
-                        .frame(width: 110, alignment: .leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                    
-                    if let typeName = settings.sessionTypeName(for: session.session.sessionTypeId) {
-                        Text("•")
-                            .foregroundStyle(.secondary)
-                            .font(.headline)
-                        Text(typeName)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
+                // Primary: Class name
+                Text(className)
+                    .font(.headline)
                 
-                // Quick stats
-                HStack(spacing: 16) {
-                    Label(formatDuration(session.stats.duration), systemImage: SFSymbol.clock)
-                    Label(session.stats.averageHR > 0 ? "\(Int(session.stats.averageHR)) bpm" : "--", systemImage: SFSymbol.heartFill)
-                    if settings.showCaloriesInApp {
-                        Label("\(Int(session.stats.calories)) cal", systemImage: SFSymbol.fireFill)
-                    }
+                // Secondary: Time • duration • HR
+                HStack(spacing: 0) {
+                    Text(timeString)
+                    Text(" • ")
+                    Text(formatDuration(session.stats.duration))
+                    Text(" • ")
+                    Text(session.stats.averageHR > 0 ? "\(Int(session.stats.averageHR)) bpm" : "-- bpm")
                 }
-                .font(.caption)
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
             }
             
@@ -62,10 +55,41 @@ struct SessionRowView: View {
         return "\(minutes) min"
     }
     
-    private func relativeTimeString(for date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
-        return formatter.localizedString(for: date, relativeTo: Date())
+    /// Custom date formatting for scannable session lists:
+    /// - < 6 hours: relative ("5 minutes ago", "2 hours ago")
+    /// - 6-48 hours: "Today 6:12 PM" / "Yesterday 7:05 AM"
+    /// - 2-7 days: "Mon 6:12 PM"
+    /// - > 7 days: "Jan 3, 6:12 PM"
+    private func formatSessionDate(_ date: Date) -> String {
+        let now = Date()
+        let calendar = Calendar.current
+        let hoursDiff = calendar.dateComponents([.hour], from: date, to: now).hour ?? 0
+        
+        // < 6 hours: use RelativeDateTimeFormatter for granular output
+        if hoursDiff < 6 {
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .full
+            return formatter.localizedString(for: date, relativeTo: now)
+        }
+        
+        // 6-48 hours: "Today 6:12 PM" / "Yesterday 7:05 AM"
+        if calendar.isDateInToday(date) {
+            return "Today " + date.formatted(date: .omitted, time: .shortened)
+        }
+        if calendar.isDateInYesterday(date) {
+            return "Yesterday " + date.formatted(date: .omitted, time: .shortened)
+        }
+        
+        // 2-7 days: "Mon 6:12 PM"
+        let daysDiff = calendar.dateComponents([.day], from: date, to: now).day ?? 0
+        if daysDiff <= 7 {
+            let weekday = date.formatted(.dateTime.weekday(.abbreviated))
+            let time = date.formatted(date: .omitted, time: .shortened)
+            return "\(weekday) \(time)"
+        }
+        
+        // > 7 days: "Jan 3, 6:12 PM"
+        return date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
     }
 }
 
@@ -73,12 +97,21 @@ struct SessionRowView: View {
     List {
         SessionRowView(session: SessionWithStats(
             session: {
-                let s = HeatSession(startDate: Date(), roomTemperature: 102)
+                let s = WorkoutSession(workoutUUID: UUID(), startDate: Date(), roomTemperature: 102)
                 s.sessionTypeId = SessionTypeConfig.DefaultTypeID.heatedVinyasa
                 return s
             }(),
             workout: nil,
             stats: SessionStats(averageHR: 145, maxHR: 168, minHR: 95, calories: 387, duration: 2732)
+        ))
+        SessionRowView(session: SessionWithStats(
+            session: {
+                let s = WorkoutSession(workoutUUID: UUID(), startDate: Date(), roomTemperature: nil)
+                s.sessionTypeId = SessionTypeConfig.DefaultTypeID.heatedVinyasa
+                return s
+            }(),
+            workout: nil,
+            stats: SessionStats(averageHR: 130, maxHR: 155, minHR: 85, calories: 320, duration: 2400)
         ))
     }
     .environment(UserSettings())

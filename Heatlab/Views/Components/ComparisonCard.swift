@@ -78,7 +78,7 @@ struct ComparisonCard: View {
     private func formattedTemperature(_ fahrenheit: Double) -> String {
         let temp = Temperature(fahrenheit: Int(fahrenheit))
         let value = temp.value(for: settings.temperatureUnit)
-        return "\(value)°"
+        return "\(value)\(settings.temperatureUnit.rawValue)"
     }
 }
 

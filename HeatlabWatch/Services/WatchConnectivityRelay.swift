@@ -2,9 +2,12 @@
 //  WatchConnectivityRelay.swift
 //  HeatlabWatch
 //
-//  Optional sync accelerator using WatchConnectivity
-//  When iPhone is reachable, relays session data for faster sync
-//  NOT a dependency - Watch app works 100% without this
+//  Reliable session sync to iPhone using dual-path delivery:
+//  - Fast lane: sendMessage when reachable (immediate ACK)
+//  - Slow lane: transferUserInfo (queued, survives app termination)
+//
+//  Sessions are always enqueued to an OutboxItem, ensuring at-least-once delivery.
+//  The iPhone's upsert-by-workoutUUID makes duplicate delivery safe.
 //
 
 import WatchConnectivity
@@ -12,9 +15,8 @@ import SwiftData
 import Combine
 import Foundation
 
-/// Relays session data to iPhone when reachable for faster sync
+/// Relays session data to iPhone using reliable outbox pattern
 /// Also receives settings from iPhone via application context
-/// This is a "fast lane" optimization, not a requirement
 final class WatchConnectivityRelay: NSObject, ObservableObject {
     static let shared = WatchConnectivityRelay()
     
@@ -22,6 +24,7 @@ final class WatchConnectivityRelay: NSObject, ObservableObject {
     
     private var session: WCSession?
     private weak var userSettings: UserSettings?
+    private var modelContext: ModelContext?
     
     override init() {
         super.init()
@@ -36,14 +39,18 @@ final class WatchConnectivityRelay: NSObject, ObservableObject {
         session?.activate()
     }
     
-    /// Configure with UserSettings to receive settings updates from iPhone
-    func configure(settings: UserSettings) {
+    /// Configure with UserSettings and ModelContext
+    func configure(settings: UserSettings, modelContext: ModelContext) {
         self.userSettings = settings
+        self.modelContext = modelContext
         
         // Apply any pending application context immediately
         if let context = session?.receivedApplicationContext, !context.isEmpty {
             applySettings(from: context)
         }
+        
+        // Drain any pending outbox items
+        drainOutbox()
     }
     
     // MARK: - Settings Sync (iPhone -> Watch)
@@ -60,78 +67,146 @@ final class WatchConnectivityRelay: NSObject, ObservableObject {
         }
     }
     
-    // MARK: - Public API
+    // MARK: - Outbox API (Reliable Delivery)
     
-    /// Attempt to relay a session to iPhone for faster sync
-    /// Calls completion with true if iPhone acknowledged receipt
-    func relaySession(_ session: HeatSession, completion: @escaping (Bool) -> Void) {
-        guard let wcSession = self.session,
-              wcSession.isReachable else {
-            completion(false)
+    /// Enqueue a session for reliable delivery to iPhone
+    /// Always enqueues regardless of reachability, then attempts immediate drain
+    func enqueueSession(_ session: WorkoutSession) {
+        guard let modelContext = modelContext else {
+            print("ModelContext not configured - cannot enqueue session")
             return
         }
         
-        // Convert session to dictionary for transfer
-        let data = sessionToDict(session)
+        guard let workoutUUID = session.workoutUUID else {
+            print("Cannot enqueue session without workoutUUID")
+            return
+        }
         
-        wcSession.sendMessage(data, replyHandler: { response in
-            let status = response["status"] as? String
-            let success = status == "saved"
-            print("Session relay response: \(response), success: \(success)")
-            completion(success)
-        }, errorHandler: { error in
-            print("Failed to relay session: \(error.localizedDescription)")
-            completion(false)
-        })
+        let dict = sessionToDict(session)
+        guard let data = encodePayload(dict) else {
+            print("Failed to encode session payload for outbox")
+            return
+        }
+        
+        let key = workoutUUID.uuidString
+        
+        // Upsert OutboxItem by dedupeKey
+        let predicate = #Predicate<OutboxItem> { $0.dedupeKey == key }
+        let fetch = FetchDescriptor(predicate: predicate)
+        let existing = try? modelContext.fetch(fetch).first
+        
+        if let item = existing {
+            // Update existing item with fresh payload
+            item.payload = data
+            item.updatedAt = Date()
+            item.status = .pending
+            print("Updated outbox item for workoutUUID \(key)")
+        } else {
+            // Create new outbox item
+            let item = OutboxItem(dedupeKey: key, sessionID: session.id.uuidString, payload: data)
+            modelContext.insert(item)
+            print("Enqueued new outbox item for workoutUUID \(key)")
+        }
+        
+        try? modelContext.save()
+        
+        // Attempt immediate delivery
+        drainOutbox()
     }
     
-    /// Relay multiple sessions (e.g., on sync trigger)
-    /// Calls completion with the IDs of sessions that were successfully acknowledged
-    func relaySessions(_ sessions: [HeatSession], completion: @escaping (Set<UUID>) -> Void) {
-        guard !sessions.isEmpty else {
-            completion([])
-            return
-        }
+    /// Drain pending outbox items using dual-path delivery
+    /// - Fast lane: sendMessage if reachable (immediate ACK potential)
+    /// - Slow lane: transferUserInfo (queued, survives app termination)
+    func drainOutbox() {
+        guard let modelContext = modelContext,
+              let wcSession = self.session else { return }
         
-        var successfulIDs = Set<UUID>()
-        let group = DispatchGroup()
-        let lock = NSLock()
+        // Fetch pending items
+        let predicate = #Predicate<OutboxItem> { $0.statusRaw == 0 }
+        let fetch = FetchDescriptor(predicate: predicate, sortBy: [SortDescriptor(\.createdAt, order: .forward)])
+        guard let pending = try? modelContext.fetch(fetch), !pending.isEmpty else { return }
         
-        for session in sessions {
-            group.enter()
-            relaySession(session) { success in
-                if success {
-                    lock.lock()
-                    successfulIDs.insert(session.id)
-                    lock.unlock()
-                }
-                group.leave()
+        print("Draining outbox: \(pending.count) pending item(s), reachable=\(wcSession.isReachable)")
+        
+        for item in pending.prefix(20) {
+            item.attemptCount += 1
+            item.lastAttemptAt = Date()
+            
+            // Decode payload back to dictionary
+            guard let dict = decodePayload(item.payload) else {
+                print("Failed to decode outbox payload for \(item.dedupeKey) - skipping")
+                continue
+            }
+            
+            // Slow lane: Always queue via transferUserInfo (survives app termination)
+            wcSession.transferUserInfo(dict)
+            print("Queued transferUserInfo for \(item.dedupeKey) (attempt \(item.attemptCount))")
+            
+            // Fast lane: Also try sendMessage if reachable (for immediate ACK)
+            if wcSession.isReachable {
+                let dedupeKey = item.dedupeKey
+                wcSession.sendMessage(dict, replyHandler: { [weak self] response in
+                    if (response["status"] as? String) == "saved" {
+                        print("Fast lane ACK received for \(dedupeKey)")
+                        self?.markAcked(workoutUUID: dedupeKey)
+                    }
+                }, errorHandler: { error in
+                    print("Fast lane failed for \(dedupeKey): \(error.localizedDescription)")
+                    // Slow lane will deliver eventually
+                })
             }
         }
         
-        group.notify(queue: .main) {
-            completion(successfulIDs)
+        try? modelContext.save()
+    }
+    
+    /// Mark an outbox item as acknowledged and delete it
+    func markAcked(workoutUUID: String) {
+        guard let modelContext = modelContext else { return }
+        
+        let predicate = #Predicate<OutboxItem> { $0.dedupeKey == workoutUUID }
+        let fetch = FetchDescriptor(predicate: predicate)
+        
+        if let item = try? modelContext.fetch(fetch).first {
+            modelContext.delete(item)
+            try? modelContext.save()
+            print("Deleted acked outbox item for \(workoutUUID)")
         }
     }
     
     // MARK: - Private Helpers
     
-    private func sessionToDict(_ session: HeatSession) -> [String: Any] {
+    private func encodePayload(_ dict: [String: Any]) -> Data? {
+        try? JSONSerialization.data(withJSONObject: dict, options: [])
+    }
+    
+    private func decodePayload(_ data: Data) -> [String: Any]? {
+        guard let obj = try? JSONSerialization.jsonObject(with: data),
+              let dict = obj as? [String: Any] else { return nil }
+        return dict
+    }
+    
+    private func sessionToDict(_ session: WorkoutSession) -> [String: Any] {
         var dict: [String: Any] = [
             "type": "session",
             "id": session.id.uuidString,
             "startDate": session.startDate.timeIntervalSince1970,
-            "roomTemperature": session.roomTemperature,
             "createdAt": session.createdAt.timeIntervalSince1970,
             "updatedAt": session.updatedAt.timeIntervalSince1970,
-            "syncStateRaw": session.syncStateRaw
+            "syncStateRaw": session.syncStateRaw,
+            "perceivedEffortRaw": session.perceivedEffortRaw
         ]
         
-        if let endDate = session.endDate {
-            dict["endDate"] = endDate.timeIntervalSince1970
-        }
+        // workoutUUID is required for upserts - should be validated before calling this
         if let workoutUUID = session.workoutUUID {
             dict["workoutUUID"] = workoutUUID.uuidString
+        }
+        // roomTemperature nil means unheated (no separate isHeated field)
+        if let roomTemperature = session.roomTemperature {
+            dict["roomTemperature"] = roomTemperature
+        }
+        if let endDate = session.endDate {
+            dict["endDate"] = endDate.timeIntervalSince1970
         }
         if let sessionTypeId = session.sessionTypeId {
             dict["sessionTypeId"] = sessionTypeId.uuidString
@@ -148,7 +223,6 @@ final class WatchConnectivityRelay: NSObject, ObservableObject {
         if let lastSyncError = session.lastSyncError {
             dict["lastSyncError"] = lastSyncError
         }
-        dict["perceivedEffortRaw"] = session.perceivedEffortRaw
         if let manualDuration = session.manualDurationOverride {
             dict["manualDurationOverride"] = manualDuration
         }
@@ -177,16 +251,32 @@ extension WatchConnectivityRelay: WCSessionDelegate {
             self.isReachable = session.isReachable
         }
         print("WCSession reachability changed: \(session.isReachable)")
+        
+        // Drain outbox when phone becomes reachable (fast lane opportunity)
+        if session.isReachable {
+            drainOutbox()
+        }
     }
     
-    // Handle messages from iPhone (if needed in future)
+    // Handle ACK messages from iPhone
     func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
         print("Received message from iPhone: \(message)")
+        handleIncomingMessage(message)
     }
     
     func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
         print("Received message from iPhone (with reply): \(message)")
+        handleIncomingMessage(message)
         replyHandler(["status": "received"])
+    }
+    
+    private func handleIncomingMessage(_ message: [String: Any]) {
+        // Handle ACK from iPhone
+        if let type = message["type"] as? String, type == "ack",
+           let workoutUUID = message["workoutUUID"] as? String {
+            print("Received ACK for workoutUUID \(workoutUUID)")
+            markAcked(workoutUUID: workoutUUID)
+        }
     }
     
     // Handle application context updates from iPhone (settings sync)

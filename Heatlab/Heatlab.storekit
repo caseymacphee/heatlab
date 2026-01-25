@@ -1,0 +1,129 @@
+{
+  "identifier" : "F5B8D4E1-1234-4567-8901-ABCDEF123456",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "1234567890",
+    "_developerTeamID" : "XXXXXXXXXX",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 758678400,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21514281",
+      "localizations" : [
+
+      ],
+      "name" : "Heatlab Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6738590123",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Full access to all Heatlab features",
+              "displayName" : "Heatlab Pro Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.heatlab.pro.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Heatlab Pro Monthly",
+          "subscriptionGroupID" : "21514281",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "39.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6738590124",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Full access to all Heatlab features - Save 33%",
+              "displayName" : "Heatlab Pro Annual",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.heatlab.pro.annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Heatlab Pro Annual",
+          "subscriptionGroupID" : "21514281",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

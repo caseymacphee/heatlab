@@ -11,12 +11,16 @@ import SwiftData
 struct HistoryView: View {
     @Environment(\.modelContext) var modelContext
     @Environment(UserSettings.self) var userSettings
+    @Environment(SubscriptionManager.self) var subscriptionManager
     @EnvironmentObject var wcReceiver: WatchConnectivityReceiver
     @State private var sessions: [SessionWithStats] = []
+    @State private var hiddenSessionCount: Int = 0
     @State private var isLoading = true
-    @State private var selectedSession: SessionWithStats?
     @State private var filter = SessionFilter()
     @State private var showingFilterSheet = false
+    @State private var claimableWorkoutCount: Int = 0
+    @State private var showingClaimList = false
+    @State private var showingPaywall = false
 
     private var filteredSessions: [SessionWithStats] {
         var result = sessions
@@ -32,7 +36,7 @@ struct HistoryView: View {
         // Filter by temperature bucket
         if !filter.selectedTemperatureBuckets.isEmpty {
             result = result.filter { session in
-                filter.selectedTemperatureBuckets.contains(session.session.temperatureBucket)
+                return filter.selectedTemperatureBuckets.contains(session.session.temperatureBucket)
             }
         }
 
@@ -52,9 +56,9 @@ struct HistoryView: View {
         case .dateAsc:
             result.sort { $0.session.startDate < $1.session.startDate }
         case .tempDesc:
-            result.sort { $0.session.roomTemperature > $1.session.roomTemperature }
+            result.sort { ($0.session.roomTemperature ?? 0) > ($1.session.roomTemperature ?? 0) }
         case .tempAsc:
-            result.sort { $0.session.roomTemperature < $1.session.roomTemperature }
+            result.sort { ($0.session.roomTemperature ?? 0) < ($1.session.roomTemperature ?? 0) }
         case .classType:
             result.sort {
                 let name0 = userSettings.sessionTypeName(for: $0.session.sessionTypeId) ?? ""
@@ -93,13 +97,24 @@ struct HistoryView: View {
                         .buttonStyle(.bordered)
                     }
                 } else {
-                    List(filteredSessions) { session in
-                        Button {
-                            selectedSession = session
-                        } label: {
-                            SessionRowView(session: session)
+                    List {
+                        ForEach(filteredSessions) { session in
+                            NavigationLink(value: session) {
+                                SessionRowView(session: session)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
+                        
+                        // Show upgrade banner if there are hidden sessions
+                        if hiddenSessionCount > 0 {
+                            Section {
+                                HistoryLimitBanner(sessionCount: hiddenSessionCount) {
+                                    showingPaywall = true
+                                }
+                                .listRowInsets(EdgeInsets())
+                                .listRowBackground(Color.clear)
+                            }
+                        }
                     }
                     .listStyle(.plain)
                 }
@@ -107,7 +122,15 @@ struct HistoryView: View {
         }
         .navigationTitle("Sessions")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingPaywall) {
+            PaywallView()
+        }
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                ImportToolbarButton(count: claimableWorkoutCount) {
+                    showingClaimList = true
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 FilterToolbarButton(filter: $filter, showingFilterSheet: $showingFilterSheet)
             }
@@ -115,11 +138,14 @@ struct HistoryView: View {
         .sheet(isPresented: $showingFilterSheet) {
             SessionFilterSheet(filter: $filter)
         }
-        .navigationDestination(item: $selectedSession) { session in
+        .navigationDestination(for: SessionWithStats.self) { session in
             SessionDetailView(
                 session: session,
                 baselineEngine: BaselineEngine(modelContext: modelContext)
             )
+        }
+        .navigationDestination(isPresented: $showingClaimList) {
+            ClaimListView()
         }
         .task {
             await loadSessions()
@@ -137,13 +163,55 @@ struct HistoryView: View {
     private func loadSessions() async {
         isLoading = true
         let repo = SessionRepository(modelContext: modelContext)
-        sessions = (try? await repo.fetchSessionsWithStats()) ?? []
+        
+        // Fetch sessions with tier-based filtering
+        if let result = try? await repo.fetchSessionsWithStats(isPro: subscriptionManager.isPro) {
+            sessions = result.visibleSessions
+            hiddenSessionCount = result.hiddenSessionCount
+        } else {
+            sessions = []
+            hiddenSessionCount = 0
+        }
 
-        print("📊 HistoryView - Total sessions: \(sessions.count)")
+        print("📊 HistoryView - Visible sessions: \(sessions.count)")
+        print("📊 HistoryView - Hidden sessions: \(hiddenSessionCount)")
         print("📊 HistoryView - Sessions with HR: \(sessions.filter { $0.stats.averageHR > 0 }.count)")
-        print("📊 HistoryView - Sessions without workoutUUID: \(sessions.filter { $0.session.workoutUUID == nil }.count)")
+        
+        // Check for claimable workouts from Apple Health
+        let importer = HealthKitImporter(modelContext: modelContext)
+        do {
+            claimableWorkoutCount = try await importer.claimableWorkoutCount(isPro: subscriptionManager.isPro)
+        } catch {
+            claimableWorkoutCount = 0
+        }
 
         isLoading = false
+    }
+}
+
+// MARK: - Import Toolbar Button
+
+struct ImportToolbarButton: View {
+    let count: Int
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 4) {
+                Image(systemName: "square.and.arrow.down")
+                if count > 0 {
+                    Text("\(count)")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.HeatLab.coral)
+                        .clipShape(Capsule())
+                }
+            }
+        }
+        .tint(count > 0 ? Color.HeatLab.coral : .primary)
     }
 }
 
@@ -151,8 +219,9 @@ struct HistoryView: View {
     NavigationStack {
         HistoryView()
     }
-    .modelContainer(for: HeatSession.self, inMemory: true)
+    .modelContainer(for: WorkoutSession.self, inMemory: true)
     .environment(UserSettings())
+    .environment(SubscriptionManager())
     .environmentObject(WatchConnectivityReceiver.shared)
 }
 

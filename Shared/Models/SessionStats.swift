@@ -25,7 +25,7 @@ struct SessionStats: Hashable {
 
 /// Combined session metadata and stats for display
 struct SessionWithStats: Identifiable, Hashable {
-    let session: HeatSession
+    let session: WorkoutSession
     let workout: HKWorkout?
     let stats: SessionStats
     

@@ -2,7 +2,7 @@
 //  UserBaseline.swift
 //  heatlab
 //
-//  Tracks user's baseline heart rate per temperature bucket
+//  Tracks user's baseline heart rate per temperature bucket (temperature ranges + unheated)
 //
 
 import SwiftData

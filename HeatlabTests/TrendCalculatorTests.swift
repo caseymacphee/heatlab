@@ -22,7 +22,8 @@ final class TrendCalculatorTests: XCTestCase {
     // MARK: - Helper Methods
     
     private func createSession(daysAgo: Int, temperature: Int, averageHR: Double) -> SessionWithStats {
-        let session = HeatSession(
+        let session = WorkoutSession(
+            workoutUUID: UUID(),
             startDate: Date().addingTimeInterval(TimeInterval(-daysAgo * 86400)),
             roomTemperature: temperature
         )

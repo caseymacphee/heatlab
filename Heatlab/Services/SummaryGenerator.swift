@@ -55,32 +55,43 @@ final class SummaryGenerator {
     
     private func buildPrompt(sessionWithStats: SessionWithStats, comparison: BaselineComparison, sessionTypeName: String?) -> String {
         let stats = sessionWithStats.stats
-        let heatSession = sessionWithStats.session
+        let WorkoutSession = sessionWithStats.session
         
         let comparisonText: String
         switch comparison {
-        case .typical:
-            comparisonText = "typical effort compared to baseline"
-        case .higherEffort(percentAbove: let percent):
+        case .typical(let bucket):
+            comparisonText = bucket.isHeated 
+                ? "typical effort compared to baseline at this temperature"
+                : "typical effort compared to non-heated session baseline"
+        case .higherEffort(let percent, _):
             comparisonText = "\(Int(percent))% higher effort than usual"
-        case .lowerEffort(percentBelow: let percent):
+        case .lowerEffort(let percent, _):
             comparisonText = "\(Int(percent))% lower effort than usual"
         case .insufficientData:
             comparisonText = "no baseline comparison available yet"
         }
         
-        return """
-        Generate a brief, friendly 2-3 sentence summary of this heated yoga session.
+        let temperatureInfo: String
+        if let temp = WorkoutSession.roomTemperature {
+            temperatureInfo = "Room Temperature: \(temp)°F"
+        } else {
+            temperatureInfo = "Room Temperature: Not heated"
+        }
         
-        Class: \(sessionTypeName ?? "Heated Class")
-        Room Temperature: \(heatSession.roomTemperature)°F
+        let sessionType = WorkoutSession.roomTemperature == nil ? "yoga session" : "heated yoga session"
+        
+        return """
+        Generate a brief, friendly 2-3 sentence summary of this \(sessionType).
+        
+        Class: \(sessionTypeName ?? "Class")
+        \(temperatureInfo)
         Duration: \(Int(stats.duration / 60)) minutes
         Average Heart Rate: \(Int(stats.averageHR)) bpm
         Max Heart Rate: \(Int(stats.maxHR)) bpm
         Calories: \(Int(stats.calories))
         Baseline Comparison: \(comparisonText)
         
-        Focus on how this session compares to their usual at similar temperatures. Be encouraging but not over-the-top.
+        Focus on the user's effort and performance. Be encouraging but not over-the-top.
         """
     }
 }

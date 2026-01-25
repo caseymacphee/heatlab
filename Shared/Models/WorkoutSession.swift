@@ -1,5 +1,5 @@
 //
-//  HeatSession.swift
+//  WorkoutSession.swift
 //  heatlab
 //
 //  Shared SwiftData model for hot yoga sessions
@@ -50,15 +50,18 @@ enum PerceivedEffort: String, Codable, CaseIterable {
 }
 
 @Model
-final class HeatSession {
+final class WorkoutSession {
     // Identity
     var id: UUID = UUID()
-    var workoutUUID: UUID?  // Links to HKWorkout
+    
+    /// Links to HKWorkout - used for upserts (uniqueness enforced in code, not DB - CloudKit doesn't support unique constraints)
+    /// nil for sessions created without a HealthKit workout
+    var workoutUUID: UUID?
     
     // Session data
     var startDate: Date = Date()
     var endDate: Date?
-    var roomTemperature: Int = 95  // Degrees Fahrenheit (e.g., 95, 105)
+    var roomTemperature: Int?  // Degrees Fahrenheit (e.g., 95, 105) - nil means unheated
     var sessionTypeId: UUID?  // References SessionTypeConfig.id
     var userNotes: String?
     var aiSummary: String?
@@ -94,8 +97,9 @@ final class HeatSession {
         deletedAt != nil
     }
     
-    init(startDate: Date, roomTemperature: Int = 95) {
+    init(workoutUUID: UUID, startDate: Date, roomTemperature: Int? = nil) {
         self.id = UUID()
+        self.workoutUUID = workoutUUID
         self.startDate = startDate
         self.roomTemperature = roomTemperature
         self.createdAt = Date()
@@ -119,17 +123,21 @@ final class HeatSession {
     }
     
     /// Returns a temperature bucket for baseline comparisons
+    /// Returns .unheated when roomTemperature is nil
     var temperatureBucket: TemperatureBucket {
-        TemperatureBucket.from(temperature: roomTemperature)
+        guard let temp = roomTemperature else { return .unheated }
+        return TemperatureBucket.from(temperature: temp)
     }
 }
 
-/// Temperature buckets for baseline grouping (5°F ranges)
+/// Temperature buckets for baseline grouping
+/// Includes temperature ranges for heated sessions and a separate bucket for unheated
 enum TemperatureBucket: String, Codable, CaseIterable {
-    case warm = "80-89°F"      // 80-89
-    case hot = "90-99°F"       // 90-99
-    case veryHot = "100-104°F" // 100-104
-    case extreme = "105°F+"    // 105+
+    case unheated = "Unheated"    // roomTemperature == nil
+    case warm = "80-89°F"         // < 90
+    case hot = "90-99°F"          // 90-99
+    case veryHot = "100-104°F"    // 100-104
+    case extreme = "105°F+"       // 105+
     
     static func from(temperature: Int) -> TemperatureBucket {
         switch temperature {
@@ -141,6 +149,16 @@ enum TemperatureBucket: String, Codable, CaseIterable {
     }
     
     var displayName: String { rawValue }
+    
+    /// Whether this is a heated temperature bucket
+    var isHeated: Bool {
+        self != .unheated
+    }
+    
+    /// Returns only the heated buckets (for UI filtering when you only want temperature options)
+    static var heatedCases: [TemperatureBucket] {
+        allCases.filter { $0.isHeated }
+    }
 }
 
 
