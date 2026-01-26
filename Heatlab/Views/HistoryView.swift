@@ -13,6 +13,7 @@ struct HistoryView: View {
     @Environment(UserSettings.self) var userSettings
     @Environment(SubscriptionManager.self) var subscriptionManager
     @EnvironmentObject var wcReceiver: WatchConnectivityReceiver
+    @Binding var navigationPath: NavigationPath
     @State private var sessions: [SessionWithStats] = []
     @State private var hiddenSessionCount: Int = 0
     @State private var isLoading = true
@@ -147,6 +148,12 @@ struct HistoryView: View {
         .navigationDestination(isPresented: $showingClaimList) {
             ClaimListView()
         }
+        .onChange(of: navigationPath.count) { oldCount, newCount in
+            // Reset showingClaimList when navigation path is cleared (e.g., when switching tabs)
+            if newCount == 0 && oldCount > 0 {
+                showingClaimList = false
+            }
+        }
         .task {
             await loadSessions()
         }
@@ -217,7 +224,7 @@ struct ImportToolbarButton: View {
 
 #Preview {
     NavigationStack {
-        HistoryView()
+        HistoryView(navigationPath: .constant(NavigationPath()))
     }
     .modelContainer(for: WorkoutSession.self, inMemory: true)
     .environment(UserSettings())

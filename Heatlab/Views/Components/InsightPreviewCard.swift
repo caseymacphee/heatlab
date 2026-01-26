@@ -4,11 +4,16 @@
 //
 //  Compact insight preview card for Dashboard - tappable to navigate to Analysis
 //
+//  Pro users: Shows first sentence of AI insight + "..." + sparkle icon
+//  Free users: Shows factual summary
+//
 
 import SwiftUI
 
 struct InsightPreviewCard: View {
     let result: AnalysisResult?
+    let isPro: Bool
+    let aiInsight: String?
     let onTap: () -> Void
 
     var body: some View {
@@ -26,13 +31,14 @@ struct InsightPreviewCard: View {
                 }
 
                 if let result = result, result.comparison.current.sessionCount > 0 {
-                    // Primary insight: 1-line data summary
-                    Text(primaryInsight(from: result))
+                    // Primary insight text
+                    Text(displayText(from: result))
                         .font(.subheadline)
                         .foregroundStyle(.primary)
+                        .lineLimit(2)
                     
-                    // Secondary: tap for details
-                    Text("Tap for details")
+                    // Secondary text
+                    Text(secondaryText)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 } else {
@@ -49,7 +55,47 @@ struct InsightPreviewCard: View {
         .buttonStyle(.plain)
     }
     
-    private func primaryInsight(from result: AnalysisResult) -> String {
+    private func displayText(from result: AnalysisResult) -> String {
+        // Pro users with AI insight: show first sentence + "..."
+        if isPro, let insight = aiInsight {
+            return firstSentence(of: insight) + "..."
+        }
+        
+        // Fallback to factual summary
+        return factualInsight(from: result)
+    }
+    
+    private var secondaryText: String {
+        if isPro && aiInsight != nil {
+            return "Tap for full insight"
+        }
+        return "Tap for details"
+    }
+    
+    /// Extract first sentence from AI insight
+    private func firstSentence(of text: String) -> String {
+        // Find first sentence ending
+        if let range = text.range(of: ".", options: .literal) {
+            let sentence = String(text[..<range.lowerBound])
+            // Avoid too-short sentences
+            if sentence.count > 20 {
+                return sentence
+            }
+            // Try to get second sentence if first is too short
+            let afterFirst = String(text[range.upperBound...]).trimmingCharacters(in: .whitespaces)
+            if let secondRange = afterFirst.range(of: ".", options: .literal) {
+                return sentence + ". " + String(afterFirst[..<secondRange.lowerBound])
+            }
+        }
+        // No period found, truncate if too long
+        if text.count > 100 {
+            let index = text.index(text.startIndex, offsetBy: 100)
+            return String(text[..<index])
+        }
+        return text
+    }
+    
+    private func factualInsight(from result: AnalysisResult) -> String {
         let comparison = result.comparison
         
         // HR-based insight
@@ -89,9 +135,8 @@ struct InsightPreviewCard: View {
     }
 }
 
-#Preview {
+#Preview("Free - Factual") {
     VStack(spacing: 16) {
-        // With HR range
         InsightPreviewCard(
             result: AnalysisResult(
                 filters: .default,
@@ -115,10 +160,16 @@ struct InsightPreviewCard: View {
                 acclimation: nil,
                 sessionMap: [:]
             ),
+            isPro: false,
+            aiInsight: nil,
             onTap: {}
         )
-        
-        // Temperature-based (no HR)
+    }
+    .padding()
+}
+
+#Preview("Pro - With AI Insight") {
+    VStack(spacing: 16) {
         InsightPreviewCard(
             result: AnalysisResult(
                 filters: .default,
@@ -126,25 +177,36 @@ struct InsightPreviewCard: View {
                     current: PeriodStats(
                         periodStart: Date(),
                         periodEnd: Date(),
-                        sessionCount: 7,
+                        sessionCount: 6,
                         totalDuration: 0,
                         totalCalories: 0,
-                        avgHeartRate: 0,
+                        avgHeartRate: 61,
                         maxHeartRate: 0,
-                        avgTemperature: 95
+                        avgTemperature: 96
                     ),
                     previous: nil
                 ),
-                trendPoints: [],
+                trendPoints: [
+                    TrendPoint(date: Date(), value: 60, temperature: 96),
+                    TrendPoint(date: Date(), value: 63, temperature: 96)
+                ],
                 acclimation: nil,
                 sessionMap: [:]
             ),
+            isPro: true,
+            aiInsight: "Your HR was very stable this week (60–63 bpm range), even on hotter classes. Consider staying hydrated on 100°F+ days.",
             onTap: {}
         )
+    }
+    .padding()
+}
 
-        // No data
+#Preview("No Data") {
+    VStack(spacing: 16) {
         InsightPreviewCard(
             result: nil,
+            isPro: false,
+            aiInsight: nil,
             onTap: {}
         )
     }

@@ -39,6 +39,7 @@ struct AnalysisView: View {
     // Chart display state
     @State private var showTrendLine: Bool = true
     @State private var selectedPoint: TrendPoint?
+    @State private var selectedPointPosition: CGPoint = .zero
     @State private var showingLegend = false
     
     private let calculator = AnalysisCalculator()
@@ -73,17 +74,13 @@ struct AnalysisView: View {
                     }
                     
                     if result.hasData {
-                        // MARK: - Insight Hook (1-2 line summary)
-                        InsightHookView(result: result)
-
-                        // MARK: - AI Insight Card (handles all states internally)
-                        insightSection
-
-                        // MARK: - Metrics Strip
-                        MetricsStripView(
-                            comparison: result.comparison,
-                            trendPoints: result.trendPoints,
-                            period: selectedPeriod
+                        // MARK: - Summary Card (unified factual/AI summary + metrics)
+                        SummaryCard(
+                            result: result,
+                            isPro: subscriptionManager.isPro,
+                            aiInsight: aiInsight,
+                            isGeneratingInsight: isGeneratingInsight,
+                            onUpgradeTap: { showingPaywall = true }
                         )
 
                         // MARK: - Trend Chart
@@ -95,11 +92,6 @@ struct AnalysisView: View {
                         } else if result.comparison.current.sessionCount < 5 {
                             // Hint about needing more sessions for acclimation
                             acclimationHint(sessionsNeeded: 5 - result.comparison.current.sessionCount)
-                        }
-
-                        // MARK: - No Prior Period Data Hint (moved to bottom)
-                        if !result.hasComparison {
-                            noPriorPeriodHint
                         }
                     } else {
                         // MARK: - Empty State
@@ -251,31 +243,59 @@ struct AnalysisView: View {
                 }
                 .chartOverlay { proxy in
                     GeometryReader { geo in
-                        Rectangle()
-                            .fill(.clear)
-                            .contentShape(Rectangle())
-                            .onTapGesture { location in
-                                selectedPoint = findNearestPoint(
-                                    at: location,
-                                    in: result.trendPoints,
-                                    proxy: proxy,
-                                    geometry: geo
-                                )
+                        ZStack {
+                            // Tap detection layer
+                            Rectangle()
+                                .fill(.clear)
+                                .contentShape(Rectangle())
+                                .onTapGesture { location in
+                                    if let point = findNearestPoint(
+                                        at: location,
+                                        in: result.trendPoints,
+                                        proxy: proxy,
+                                        geometry: geo
+                                    ) {
+                                        // Calculate point position for tooltip anchoring
+                                        if let position = pointPosition(
+                                            for: point,
+                                            proxy: proxy,
+                                            geometry: geo
+                                        ) {
+                                            selectedPoint = point
+                                            selectedPointPosition = position
+                                        }
+                                    } else {
+                                        // Tap on empty space dismisses tooltip
+                                        selectedPoint = nil
+                                    }
+                                }
+                            
+                            // Selection ring highlight (in overlay to avoid chart re-render)
+                            if selectedPoint != nil {
+                                Circle()
+                                    .stroke(Color.primary.opacity(0.4), lineWidth: 2)
+                                    .frame(width: 14, height: 14)
+                                    .position(selectedPointPosition)
                             }
+                            
+                            // Tooltip callout anchored near point
+                            if let point = selectedPoint {
+                                ChartCalloutView(
+                                    point: point,
+                                    classTypeName: settings.sessionTypeName(for: point.sessionTypeId),
+                                    temperatureUnit: settings.temperatureUnit
+                                )
+                                .position(calloutPosition(
+                                    pointPosition: selectedPointPosition,
+                                    in: geo.size
+                                ))
+                            }
+                        }
                     }
                 }
+                .animation(nil, value: selectedPoint?.id)
                 .frame(height: 220)
                 .padding(.bottom, 4)
-                
-                // Tooltip overlay
-                if let point = selectedPoint {
-                    ChartTooltipView(
-                        point: point,
-                        classTypeName: settings.sessionTypeName(for: point.sessionTypeId),
-                        temperatureUnit: settings.temperatureUnit,
-                        onDismiss: { selectedPoint = nil }
-                    )
-                }
                 
                 // Temperature legend button
                 HStack {
@@ -290,7 +310,7 @@ struct AnalysisView: View {
         }
         .heatLabCard()
         .sheet(isPresented: $showingLegend) {
-            TemperatureLegendSheet(temperatureUnit: settings.temperatureUnit)
+            TemperatureLegendSheet()
                 .presentationDetents([.medium])
         }
     }
@@ -332,6 +352,57 @@ struct AnalysisView: View {
         
         return nil
     }
+    
+    /// Get the screen position of a TrendPoint within the chart
+    private func pointPosition(
+        for point: TrendPoint,
+        proxy: ChartProxy,
+        geometry: GeometryProxy
+    ) -> CGPoint? {
+        guard let plotFrame = proxy.plotFrame else { return nil }
+        let plotOrigin = geometry[plotFrame].origin
+        
+        guard let xPos = proxy.position(forX: point.date),
+              let yPos = proxy.position(forY: point.value) else {
+            return nil
+        }
+        
+        return CGPoint(
+            x: plotOrigin.x + xPos,
+            y: plotOrigin.y + yPos
+        )
+    }
+    
+    /// Calculate the callout position, keeping it within bounds and offset from the point
+    private func calloutPosition(pointPosition: CGPoint, in size: CGSize) -> CGPoint {
+        let calloutWidth: CGFloat = 180
+        let calloutHeight: CGFloat = 120
+        let verticalOffset: CGFloat = 50  // Distance above the point
+        let edgePadding: CGFloat = 8
+        
+        // Default: position above and centered on the point
+        var x = pointPosition.x
+        var y = pointPosition.y - verticalOffset
+        
+        // Keep within horizontal bounds
+        let halfWidth = calloutWidth / 2
+        if x - halfWidth < edgePadding {
+            x = halfWidth + edgePadding
+        } else if x + halfWidth > size.width - edgePadding {
+            x = size.width - halfWidth - edgePadding
+        }
+        
+        // If too close to top, position below the point instead
+        if y - calloutHeight / 2 < edgePadding {
+            y = pointPosition.y + verticalOffset
+        }
+        
+        // Final bounds check for vertical
+        let halfHeight = calloutHeight / 2
+        y = max(halfHeight + edgePadding, min(y, size.height - halfHeight - edgePadding))
+        
+        return CGPoint(x: x, y: y)
+    }
 
     private var periodDescription: String {
         switch selectedPeriod {
@@ -342,38 +413,6 @@ struct AnalysisView: View {
         }
     }
     
-    // MARK: - AI Insight Section
-
-    @ViewBuilder
-    private var insightSection: some View {
-        if subscriptionManager.isPro {
-            let state: AIInsightState = {
-                if !AnalysisInsightGenerator.isAvailable {
-                    return .unavailable
-                }
-                if let insight = aiInsight {
-                    return .ready(insight)
-                }
-                if isGeneratingInsight {
-                    return .generating
-                }
-                if let result = analysisResult, result.comparison.current.sessionCount < 2 {
-                    return .insufficientData(sessionsNeeded: 2 - result.comparison.current.sessionCount)
-                }
-                return .generating
-            }()
-
-            AIInsightSection(state: state) {
-                scheduleInsightGeneration()
-            }
-            .animation(.easeInOut(duration: 0.3), value: aiInsight)
-        } else {
-            // Pro-gated AI Insights card
-            UpgradePromptCard(feature: .aiInsights) {
-                showingPaywall = true
-            }
-        }
-    }
     
     // MARK: - Loading & Empty States
     
@@ -415,14 +454,6 @@ struct AnalysisView: View {
     }
     
     // MARK: - Context Hints
-
-    private var noPriorPeriodHint: some View {
-        Text("Comparisons unlock after 2 weeks of data.")
-            .font(.caption)
-            .foregroundStyle(.tertiary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 4)
-    }
     
     private func acclimationHint(sessionsNeeded: Int) -> some View {
         HStack(spacing: 10) {
@@ -681,73 +712,65 @@ private struct PeriodButton: View {
 
 // MARK: - Chart Tooltip View
 
-private struct ChartTooltipView: View {
+/// Compact callout view that appears inside the chart area near the selected point
+private struct ChartCalloutView: View {
     let point: TrendPoint
     let classTypeName: String?
     let temperatureUnit: TemperatureUnit
-    let onDismiss: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(point.date, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day())
-                    .font(.subheadline.bold())
-                Spacer()
-                Button(action: onDismiss) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
-                }
-            }
+        VStack(alignment: .leading, spacing: 6) {
+            // Date header
+            Text(point.date, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day())
+                .font(.caption.bold())
+                .foregroundStyle(.primary)
             
-            Divider()
-            
-            VStack(alignment: .leading, spacing: 4) {
+            // Compact metrics
+            HStack(spacing: 12) {
                 // Heart Rate
-                HStack(spacing: 6) {
+                HStack(spacing: 3) {
                     Image(systemName: SFSymbol.heartFill)
+                        .font(.caption2)
                         .foregroundStyle(Color.HeatLab.heartRate)
-                        .frame(width: 16)
-                    Text("\(Int(point.value)) bpm")
-                        .font(.subheadline)
+                    Text("\(Int(point.value))")
+                        .font(.caption.monospacedDigit())
                 }
                 
                 // Duration
-                HStack(spacing: 6) {
+                HStack(spacing: 3) {
                     Image(systemName: SFSymbol.clock)
+                        .font(.caption2)
                         .foregroundStyle(Color.HeatLab.duration)
-                        .frame(width: 16)
                     Text(formattedDuration)
-                        .font(.subheadline)
+                        .font(.caption.monospacedDigit())
                 }
                 
                 // Temperature
-                HStack(spacing: 6) {
+                HStack(spacing: 3) {
                     Image(systemName: SFSymbol.thermometer)
+                        .font(.caption2)
                         .foregroundStyle(Color.HeatLab.temperature(fahrenheit: point.temperature))
-                        .frame(width: 16)
                     Text(temperatureText)
-                        .font(.subheadline)
-                }
-                
-                // Class type (if available)
-                if let className = classTypeName {
-                    HStack(spacing: 6) {
-                        Image(systemName: SFSymbol.yoga)
-                            .foregroundStyle(.secondary)
-                            .frame(width: 16)
-                        Text(className)
-                            .font(.subheadline)
-                    }
+                        .font(.caption.monospacedDigit())
                 }
             }
+            .foregroundStyle(.secondary)
+            
+            // Class type (if available)
+            if let className = classTypeName {
+                Text(className)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
         }
-        .padding(12)
+        .padding(10)
+        .frame(width: 180)
         .background {
-            RoundedRectangle(cornerRadius: HeatLabRadius.md)
-                .fill(.regularMaterial)
-                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
+            RoundedRectangle(cornerRadius: HeatLabRadius.sm)
+                .fill(.ultraThinMaterial)
+                .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
-        .padding(.horizontal)
     }
     
     private var formattedDuration: String {
@@ -756,18 +779,18 @@ private struct ChartTooltipView: View {
         let remainingMinutes = minutes % 60
         
         if hours > 0 {
-            return "\(hours)h \(remainingMinutes)m"
+            return "\(hours)h\(remainingMinutes)m"
         }
-        return "\(minutes) min"
+        return "\(minutes)m"
     }
     
     private var temperatureText: String {
         if point.temperature == 0 {
-            return "Unheated"
+            return "—"
         }
         let temp = Temperature(fahrenheit: point.temperature)
         let value = temp.value(for: temperatureUnit)
-        return "\(value)\(temperatureUnit.rawValue) (\(point.temperatureBucket.displayName))"
+        return "\(value)°"
     }
 }
 
@@ -775,7 +798,6 @@ private struct ChartTooltipView: View {
 
 private struct TemperatureLegendSheet: View {
     @Environment(\.dismiss) var dismiss
-    let temperatureUnit: TemperatureUnit
     
     var body: some View {
         NavigationStack {
@@ -796,10 +818,6 @@ private struct TemperatureLegendSheet: View {
                                 .font(.body)
                             
                             Spacer()
-                            
-                            Text(temperatureRange(for: bucket))
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
                         }
                         .padding(.horizontal)
                         .padding(.vertical, 12)
@@ -834,21 +852,6 @@ private struct TemperatureLegendSheet: View {
         case .hot: return Color.HeatLab.tempHot
         case .veryHot: return Color.HeatLab.tempVeryHot
         case .extreme: return Color.HeatLab.tempExtreme
-        }
-    }
-    
-    private func temperatureRange(for bucket: TemperatureBucket) -> String {
-        switch bucket {
-        case .unheated:
-            return "No heat"
-        case .warm:
-            return temperatureUnit == .fahrenheit ? "< 90°F" : "< 32°C"
-        case .hot:
-            return temperatureUnit == .fahrenheit ? "90-99°F" : "32-37°C"
-        case .veryHot:
-            return temperatureUnit == .fahrenheit ? "100-104°F" : "38-40°C"
-        case .extreme:
-            return temperatureUnit == .fahrenheit ? "105°F+" : "41°C+"
         }
     }
 }

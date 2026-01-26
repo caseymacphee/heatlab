@@ -14,6 +14,7 @@ struct DashboardView: View {
     @Environment(SubscriptionManager.self) var subscriptionManager
     @EnvironmentObject var wcReceiver: WatchConnectivityReceiver
     @Binding var selectedTab: Int
+    @Binding var navigationPath: NavigationPath
 
     @State private var sessions: [SessionWithStats] = []
     @State private var isLoading = true
@@ -33,53 +34,42 @@ struct DashboardView: View {
     }
 
     @ViewBuilder
-    private func ComparisonStatsGrid(comparison: PeriodComparison, trendPoints: [TrendPoint]) -> some View {
+    private func StatsGrid(comparison: PeriodComparison, trendPoints: [TrendPoint]) -> some View {
         let hrRange = computeHRRange(from: trendPoints)
         
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             // 1. Sessions
-            ComparisonStatItem(
+            StatItem(
                 title: "Sessions",
-                currentValue: "\(comparison.current.sessionCount)",
-                delta: comparison.sessionCountDelta.map { Double($0) },
-                isPercentage: false,
+                value: "\(comparison.current.sessionCount)",
                 systemIcon: SFSymbol.yoga
             )
 
             // 2. Avg Temp
-            ComparisonStatItem(
+            StatItem(
                 title: "Avg Temp",
-                currentValue: comparison.current.avgTemperature > 0 ? formattedTemperature(comparison.current.avgTemperature) : "--",
-                delta: comparison.avgTemperatureDelta,
-                isPercentage: false,
+                value: comparison.current.avgTemperature > 0 ? formattedTemperature(comparison.current.avgTemperature) : "--",
                 systemIcon: SFSymbol.thermometer
             )
 
             // 3. Avg HR
-            ComparisonStatItem(
+            StatItem(
                 title: "Avg HR",
-                currentValue: comparison.current.avgHeartRate > 0 ? "\(Int(comparison.current.avgHeartRate)) bpm" : "--",
-                delta: comparison.avgHRDelta,
-                isPercentage: true,
-                invertDelta: true,
+                value: comparison.current.avgHeartRate > 0 ? "\(Int(comparison.current.avgHeartRate)) bpm" : "--",
                 systemIcon: SFSymbol.heartFill
             )
 
             // 4. Calories OR HR Range (conditional)
             if settings.showCaloriesInApp {
-                ComparisonStatItem(
+                StatItem(
                     title: "Calories",
-                    currentValue: comparison.current.totalCalories > 0 ? "\(Int(comparison.current.totalCalories))" : "--",
-                    delta: comparison.caloriesDelta,
-                    isPercentage: true,
+                    value: comparison.current.totalCalories > 0 ? "\(Int(comparison.current.totalCalories))" : "--",
                     systemIcon: SFSymbol.fireFill
                 )
             } else {
-                ComparisonStatItem(
+                StatItem(
                     title: "HR Range",
-                    currentValue: hrRange != nil ? "\(hrRange!.min)–\(hrRange!.max)" : "--",
-                    delta: nil,
-                    isPercentage: false,
+                    value: hrRange != nil ? "\(hrRange!.min)–\(hrRange!.max)" : "--",
                     systemIcon: SFSymbol.waveform
                 )
             }
@@ -121,23 +111,17 @@ struct DashboardView: View {
                     // MARK: - Insight Preview (taps to Analysis tab)
                     InsightPreviewCard(
                         result: analysisResult,
+                        isPro: subscriptionManager.isPro,
+                        aiInsight: nil,  // AI insights generated on Analysis view
                         onTap: { selectedTab = 2 }
                     )
 
                     // MARK: - Past 7 Days Stats
                     VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Past 7 Days")
-                                .font(.headline)
-                            Spacer()
-                            if comparison.previous != nil {
-                                Text("vs Previous 7 Days")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
+                        Text("Past 7 Days")
+                            .font(.headline)
 
-                        ComparisonStatsGrid(comparison: comparison, trendPoints: analysisResult?.trendPoints ?? [])
+                        StatsGrid(comparison: comparison, trendPoints: analysisResult?.trendPoints ?? [])
                     }
                     .heatLabCard()
 
@@ -219,6 +203,12 @@ struct DashboardView: View {
         }
         .navigationDestination(isPresented: $showingClaimList) {
             ClaimListView()
+        }
+        .onChange(of: navigationPath.count) { oldCount, newCount in
+            // Reset showingClaimList when navigation path is cleared (e.g., when switching tabs)
+            if newCount == 0 && oldCount > 0 {
+                showingClaimList = false
+            }
         }
     }
     
@@ -372,9 +362,34 @@ struct ImportWorkoutsCTA: View {
     }
 }
 
+// MARK: - Stat Item
+
+private struct StatItem: View {
+    let title: String
+    let value: String
+    let systemIcon: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 4) {
+                Image(systemName: systemIcon)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(title)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Text(value)
+                .font(.title3.bold())
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 #Preview {
     NavigationStack {
-        DashboardView(selectedTab: .constant(0))
+        DashboardView(selectedTab: .constant(0), navigationPath: .constant(NavigationPath()))
     }
     .modelContainer(for: WorkoutSession.self, inMemory: true)
     .environment(UserSettings())
