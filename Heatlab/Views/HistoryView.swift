@@ -82,13 +82,13 @@ struct HistoryView: View {
                     Spacer()
                 } else if sessions.isEmpty {
                     ContentUnavailableView {
-                        Label("No Sessions Yet", systemImage: SFSymbol.fireFill)
+                        Label("No Sessions Yet", systemImage: SFSymbol.mindAndBody)
                     } description: {
-                        Text("Complete your first hot yoga session on your Apple Watch to see it here.")
+                        Text("Complete your first session on Apple Watch, or claim a recent workout to see it here.")
                     }
                 } else if filteredSessions.isEmpty {
                     ContentUnavailableView {
-                        Label("No Matching Sessions", systemImage: "line.3.horizontal.decrease.circle")
+                        Label("No Matching Sessions", systemImage: SFSymbol.mindAndBody)
                     } description: {
                         Text("Try adjusting your filters to see more sessions.")
                     } actions: {
@@ -104,8 +104,9 @@ struct HistoryView: View {
                                 SessionRowView(session: session)
                             }
                             .buttonStyle(.plain)
+                            .listRowBackground(Color.hlSurface)
                         }
-                        
+
                         // Show upgrade banner if there are hidden sessions
                         if hiddenSessionCount > 0 {
                             Section {
@@ -118,9 +119,12 @@ struct HistoryView: View {
                         }
                     }
                     .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.hlBackground)
                 }
             }
         }
+        .background(Color.hlBackground)
         .navigationTitle("Sessions")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingPaywall) {
@@ -128,7 +132,7 @@ struct HistoryView: View {
         }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                ImportToolbarButton(count: claimableWorkoutCount) {
+                ClaimToolbarButton(count: claimableWorkoutCount) {
                     showingClaimList = true
                 }
             }
@@ -187,7 +191,10 @@ struct HistoryView: View {
         // Check for claimable workouts from Apple Health
         let importer = HealthKitImporter(modelContext: modelContext)
         do {
-            claimableWorkoutCount = try await importer.claimableWorkoutCount(isPro: subscriptionManager.isPro)
+            claimableWorkoutCount = try await importer.claimableWorkoutCount(
+                isPro: subscriptionManager.isPro,
+                enabledTypes: userSettings.enabledWorkoutTypes
+            )
         } catch {
             claimableWorkoutCount = 0
         }
@@ -196,16 +203,16 @@ struct HistoryView: View {
     }
 }
 
-// MARK: - Import Toolbar Button
+// MARK: - Claim Toolbar Button
 
-struct ImportToolbarButton: View {
+struct ClaimToolbarButton: View {
     let count: Int
     let onTap: () -> Void
     
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 4) {
-                Image(systemName: "square.and.arrow.down")
+                Image(systemName: SFSymbol.claim)
                 if count > 0 {
                     Text("\(count)")
                         .font(.caption2)
@@ -213,12 +220,12 @@ struct ImportToolbarButton: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Color.HeatLab.coral)
+                        .background(Color.hlAccent)
                         .clipShape(Capsule())
                 }
             }
         }
-        .tint(count > 0 ? Color.HeatLab.coral : .primary)
+        .tint(.primary)
     }
 }
 

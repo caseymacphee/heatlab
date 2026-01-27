@@ -66,7 +66,7 @@ enum SubscriptionStatusInfo: Equatable {
 enum ProFeature: String, CaseIterable {
     case unlimitedHistory = "Unlimited session history"
     case periodComparisons = "Week, Month & Year comparisons"
-    case aiInsights = "AI-powered insights"
+    case aiInsights = "AI insights"
     case fullTrends = "Full trend analysis"
     
     /// Short description for upgrade prompts
@@ -94,6 +94,16 @@ enum ProFeature: String, CaseIterable {
             return "sparkles"
         case .fullTrends:
             return "chart.line.uptrend.xyaxis"
+        }
+    }
+    
+    /// Whether this feature has device/OS requirements
+    var hasDeviceRequirements: Bool {
+        switch self {
+        case .aiInsights:
+            return true
+        default:
+            return false
         }
     }
 }

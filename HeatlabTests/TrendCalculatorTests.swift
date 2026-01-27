@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import heatlab
+@testable import HeatLab
 
 final class TrendCalculatorTests: XCTestCase {
     var calculator: TrendCalculator!

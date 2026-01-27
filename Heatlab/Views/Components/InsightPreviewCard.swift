@@ -21,7 +21,7 @@ struct InsightPreviewCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Image(systemName: SFSymbol.sparkles)
-                        .foregroundStyle(Color.HeatLab.coral)
+                        .foregroundStyle(Color.hlAccent)
                     Text("Insight")
                         .font(.subheadline.bold())
                     Spacer()
@@ -50,7 +50,7 @@ struct InsightPreviewCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
             .background(LinearGradient.insight)
-            .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.lg))
+            .clipShape(RoundedRectangle(cornerRadius: HLRadius.card))
         }
         .buttonStyle(.plain)
     }

@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		3C766A4D2F1400F100309D3D /* HeatlabWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 3C766A2D2F1400EF00309D3D /* HeatlabWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		3C766A4D2F1400F100309D3D /* HeatLabWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 3C766A2D2F1400EF00309D3D /* HeatLabWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		3C766B0D2F1520F400309D3D /* WorkoutSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B052F1520F400309D3D /* WorkoutSession.swift */; };
 		3C766B0E2F1520F400309D3D /* UserSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B0B2F1520F400309D3D /* UserSettings.swift */; };
 		3C766B0F2F1520F400309D3D /* UserBaseline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B072F1520F400309D3D /* UserBaseline.swift */; };
@@ -81,7 +81,7 @@
 			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
 			dstSubfolderSpec = 16;
 			files = (
-				3C766A4D2F1400F100309D3D /* HeatlabWatch.app in Embed Watch Content */,
+				3C766A4D2F1400F100309D3D /* HeatLabWatch.app in Embed Watch Content */,
 			);
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -89,10 +89,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		3C7669FA2F14000900309D3D /* Heatlab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Heatlab.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3C7669FA2F14000900309D3D /* HeatLab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HeatLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C766A0B2F14000B00309D3D /* HeatlabTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HeatlabTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C766A152F14000B00309D3D /* HeatlabUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HeatlabUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		3C766A2D2F1400EF00309D3D /* HeatlabWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HeatlabWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3C766A2D2F1400EF00309D3D /* HeatLabWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HeatLabWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C766A392F1400F100309D3D /* HeatlabWatchTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HeatlabWatchTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C766A432F1400F100309D3D /* HeatlabWatchUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HeatlabWatchUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C766B052F1520F400309D3D /* WorkoutSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSession.swift; sourceTree = "<group>"; };
@@ -111,19 +111,19 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		3C766A1D2F14000B00309D3D /* Exceptions for "Heatlab" folder in "Heatlab" target */ = {
+		3C766A1D2F14000B00309D3D /* Exceptions for "Heatlab" folder in "HeatLab" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 3C7669F92F14000900309D3D /* Heatlab */;
+			target = 3C7669F92F14000900309D3D /* HeatLab */;
 		};
-		3C7699312F17DB7F000FAEAD /* Exceptions for "HeatlabWatch" folder in "HeatlabWatch" target */ = {
+		3C7699312F17DB7F000FAEAD /* Exceptions for "HeatlabWatch" folder in "HeatLabWatch" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 3C766A2C2F1400EF00309D3D /* HeatlabWatch */;
+			target = 3C766A2C2F1400EF00309D3D /* HeatLabWatch */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -131,7 +131,7 @@
 		3C7669FC2F14000900309D3D /* Heatlab */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				3C766A1D2F14000B00309D3D /* Exceptions for "Heatlab" folder in "Heatlab" target */,
+				3C766A1D2F14000B00309D3D /* Exceptions for "Heatlab" folder in "HeatLab" target */,
 			);
 			path = Heatlab;
 			sourceTree = "<group>";
@@ -149,7 +149,7 @@
 		3C766A2E2F1400EF00309D3D /* HeatlabWatch */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				3C7699312F17DB7F000FAEAD /* Exceptions for "HeatlabWatch" folder in "HeatlabWatch" target */,
+				3C7699312F17DB7F000FAEAD /* Exceptions for "HeatlabWatch" folder in "HeatLabWatch" target */,
 			);
 			path = HeatlabWatch;
 			sourceTree = "<group>";
@@ -230,10 +230,10 @@
 		3C7669FB2F14000900309D3D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				3C7669FA2F14000900309D3D /* Heatlab.app */,
+				3C7669FA2F14000900309D3D /* HeatLab.app */,
 				3C766A0B2F14000B00309D3D /* HeatlabTests.xctest */,
 				3C766A152F14000B00309D3D /* HeatlabUITests.xctest */,
-				3C766A2D2F1400EF00309D3D /* HeatlabWatch.app */,
+				3C766A2D2F1400EF00309D3D /* HeatLabWatch.app */,
 				3C766A392F1400F100309D3D /* HeatlabWatchTests.xctest */,
 				3C766A432F1400F100309D3D /* HeatlabWatchUITests.xctest */,
 			);
@@ -286,9 +286,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		3C7669F92F14000900309D3D /* Heatlab */ = {
+		3C7669F92F14000900309D3D /* HeatLab */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 3C766A1E2F14000B00309D3D /* Build configuration list for PBXNativeTarget "Heatlab" */;
+			buildConfigurationList = 3C766A1E2F14000B00309D3D /* Build configuration list for PBXNativeTarget "HeatLab" */;
 			buildPhases = (
 				3C7669F62F14000900309D3D /* Sources */,
 				3C7669F72F14000900309D3D /* Frameworks */,
@@ -303,11 +303,11 @@
 			fileSystemSynchronizedGroups = (
 				3C7669FC2F14000900309D3D /* Heatlab */,
 			);
-			name = Heatlab;
+			name = HeatLab;
 			packageProductDependencies = (
 			);
 			productName = heatlab;
-			productReference = 3C7669FA2F14000900309D3D /* Heatlab.app */;
+			productReference = 3C7669FA2F14000900309D3D /* HeatLab.app */;
 			productType = "com.apple.product-type.application";
 		};
 		3C766A0A2F14000B00309D3D /* HeatlabTests */ = {
@@ -356,9 +356,9 @@
 			productReference = 3C766A152F14000B00309D3D /* HeatlabUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
-		3C766A2C2F1400EF00309D3D /* HeatlabWatch */ = {
+		3C766A2C2F1400EF00309D3D /* HeatLabWatch */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 3C766A4E2F1400F100309D3D /* Build configuration list for PBXNativeTarget "HeatlabWatch" */;
+			buildConfigurationList = 3C766A4E2F1400F100309D3D /* Build configuration list for PBXNativeTarget "HeatLabWatch" */;
 			buildPhases = (
 				3C766A292F1400EF00309D3D /* Sources */,
 				3C766A2A2F1400EF00309D3D /* Frameworks */,
@@ -371,11 +371,11 @@
 			fileSystemSynchronizedGroups = (
 				3C766A2E2F1400EF00309D3D /* HeatlabWatch */,
 			);
-			name = HeatlabWatch;
+			name = HeatLabWatch;
 			packageProductDependencies = (
 			);
 			productName = "HeatLab Watch Watch App";
-			productReference = 3C766A2D2F1400EF00309D3D /* HeatlabWatch.app */;
+			productReference = 3C766A2D2F1400EF00309D3D /* HeatLabWatch.app */;
 			productType = "com.apple.product-type.application";
 		};
 		3C766A382F1400F100309D3D /* HeatlabWatchTests */ = {
@@ -472,10 +472,10 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				3C7669F92F14000900309D3D /* Heatlab */,
+				3C7669F92F14000900309D3D /* HeatLab */,
 				3C766A0A2F14000B00309D3D /* HeatlabTests */,
 				3C766A142F14000B00309D3D /* HeatlabUITests */,
-				3C766A2C2F1400EF00309D3D /* HeatlabWatch */,
+				3C766A2C2F1400EF00309D3D /* HeatLabWatch */,
 				3C766A382F1400F100309D3D /* HeatlabWatchTests */,
 				3C766A422F1400F100309D3D /* HeatlabWatchUITests */,
 			);
@@ -601,27 +601,27 @@
 /* Begin PBXTargetDependency section */
 		3C766A0D2F14000B00309D3D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 3C7669F92F14000900309D3D /* Heatlab */;
+			target = 3C7669F92F14000900309D3D /* HeatLab */;
 			targetProxy = 3C766A0C2F14000B00309D3D /* PBXContainerItemProxy */;
 		};
 		3C766A172F14000B00309D3D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 3C7669F92F14000900309D3D /* Heatlab */;
+			target = 3C7669F92F14000900309D3D /* HeatLab */;
 			targetProxy = 3C766A162F14000B00309D3D /* PBXContainerItemProxy */;
 		};
 		3C766A3B2F1400F100309D3D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 3C766A2C2F1400EF00309D3D /* HeatlabWatch */;
+			target = 3C766A2C2F1400EF00309D3D /* HeatLabWatch */;
 			targetProxy = 3C766A3A2F1400F100309D3D /* PBXContainerItemProxy */;
 		};
 		3C766A452F1400F100309D3D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 3C766A2C2F1400EF00309D3D /* HeatlabWatch */;
+			target = 3C766A2C2F1400EF00309D3D /* HeatLabWatch */;
 			targetProxy = 3C766A442F1400F100309D3D /* PBXContainerItemProxy */;
 		};
 		3C766A4C2F1400F100309D3D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 3C766A2C2F1400EF00309D3D /* HeatlabWatch */;
+			target = 3C766A2C2F1400EF00309D3D /* HeatLabWatch */;
 			targetProxy = 3C766A4B2F1400F100309D3D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -844,7 +844,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/heatlab.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/heatlab";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HeatLab.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HeatLab";
 			};
 			name = Debug;
 		};
@@ -866,7 +866,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/heatlab.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/heatlab";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HeatLab.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HeatLab";
 			};
 			name = Release;
 		};
@@ -922,7 +922,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HeatlabWatch/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "HeatLab Watch";
+				INFOPLIST_KEY_CFBundleDisplayName = HeatLab;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = macpheelabs.heatlab;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -957,7 +957,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HeatlabWatch/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "HeatLab Watch";
+				INFOPLIST_KEY_CFBundleDisplayName = HeatLab;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = macpheelabs.heatlab;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1082,7 +1082,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		3C766A1E2F14000B00309D3D /* Build configuration list for PBXNativeTarget "Heatlab" */ = {
+		3C766A1E2F14000B00309D3D /* Build configuration list for PBXNativeTarget "HeatLab" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3C766A1F2F14000B00309D3D /* Debug */,
@@ -1109,7 +1109,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		3C766A4E2F1400F100309D3D /* Build configuration list for PBXNativeTarget "HeatlabWatch" */ = {
+		3C766A4E2F1400F100309D3D /* Build configuration list for PBXNativeTarget "HeatLabWatch" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3C766A4F2F1400F100309D3D /* Debug */,

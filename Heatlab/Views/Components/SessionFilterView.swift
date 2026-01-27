@@ -81,7 +81,7 @@ struct SessionFilterSheet: View {
                                 Spacer()
                                 if filter.sortOption == option {
                                     Image(systemName: SFSymbol.checkmark)
-                                        .foregroundStyle(Color.HeatLab.coral)
+                                        .foregroundStyle(Color.hlAccent)
                                 }
                             }
                         }
@@ -100,7 +100,7 @@ struct SessionFilterSheet: View {
                                 Spacer()
                                 if filter.selectedClassTypes.contains(sessionType.id) {
                                     Image(systemName: SFSymbol.checkmark)
-                                        .foregroundStyle(Color.HeatLab.coral)
+                                        .foregroundStyle(Color.hlAccent)
                                 }
                             }
                         }
@@ -122,7 +122,7 @@ struct SessionFilterSheet: View {
                                 Spacer()
                                 if filter.selectedTemperatureBuckets.contains(bucket) {
                                     Image(systemName: SFSymbol.checkmark)
-                                        .foregroundStyle(Color.HeatLab.coral)
+                                        .foregroundStyle(Color.hlAccent)
                                 }
                             }
                         }
@@ -230,12 +230,12 @@ struct FilterToolbarButton: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Color.HeatLab.coral)
+                        .background(Color.hlAccent)
                         .clipShape(Capsule())
                 }
             }
         }
-        .tint(filter.hasActiveFilters ? Color.HeatLab.coral : .primary)
+        .tint(filter.hasActiveFilters ? Color.hlAccent : .primary)
     }
 }
 
@@ -276,7 +276,7 @@ struct ActiveFiltersBar: View {
                 .padding(.horizontal, HeatLabSpacing.md)
                 .padding(.vertical, HeatLabSpacing.xs)
             }
-            .background(Color(.systemGray6))
+            .background(Color.hlSurface2)
         }
     }
 
@@ -307,7 +307,7 @@ struct ActiveFiltersBar: View {
 
 struct FilterChip: View {
     let label: String
-    var color: Color = Color.HeatLab.coral
+    var color: Color = Color.hlAccent
     let onRemove: () -> Void
 
     var body: some View {

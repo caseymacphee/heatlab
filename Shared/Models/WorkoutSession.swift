@@ -2,7 +2,7 @@
 //  WorkoutSession.swift
 //  heatlab
 //
-//  Shared SwiftData model for hot yoga sessions
+//  Shared SwiftData model for workout sessions
 //
 
 import SwiftData

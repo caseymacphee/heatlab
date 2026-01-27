@@ -67,7 +67,7 @@
       "localizations" : [
 
       ],
-      "name" : "Heatlab Pro",
+      "name" : "HeatLab Pro",
       "subscriptions" : [
         {
           "adHocOffers" : [
@@ -83,14 +83,14 @@
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "Full access to all Heatlab features",
-              "displayName" : "Heatlab Pro Monthly",
+              "description" : "Full access to all HeatLab features",
+              "displayName" : "HeatLab Pro Monthly",
               "locale" : "en_US"
             }
           ],
           "productID" : "com.heatlab.pro.monthly",
           "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "Heatlab Pro Monthly",
+          "referenceName" : "HeatLab Pro Monthly",
           "subscriptionGroupID" : "21514281",
           "type" : "RecurringSubscription"
         },
@@ -108,14 +108,14 @@
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "Full access to all Heatlab features - Save 33%",
-              "displayName" : "Heatlab Pro Annual",
+              "description" : "Full access to all HeatLab features - Save 33%",
+              "displayName" : "HeatLab Pro Annual",
               "locale" : "en_US"
             }
           ],
           "productID" : "com.heatlab.pro.annual",
           "recurringSubscriptionPeriod" : "P1Y",
-          "referenceName" : "Heatlab Pro Annual",
+          "referenceName" : "HeatLab Pro Annual",
           "subscriptionGroupID" : "21514281",
           "type" : "RecurringSubscription"
         }

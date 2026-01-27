@@ -43,7 +43,10 @@ struct ContentView: View {
             ActiveSessionView()
         case .completed:
             if let workout = workoutManager.completedWorkout {
-                SessionConfirmationView(workout: workout) {
+                SessionConfirmationView(
+                    workout: workout,
+                    selectedSessionTypeId: workoutManager.selectedSessionTypeId
+                ) {
                     workoutManager.reset()
                 }
             } else {

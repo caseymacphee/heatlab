@@ -2,7 +2,8 @@
 //  SessionConfirmationView.swift
 //  Heatlab Watch Watch App
 //
-//  Post-workout view to capture room temperature and class type
+//  Post-workout view to capture room temperature and effort
+//  Session type is pre-selected in StartView before the workout
 //  Local-first: Session saves immediately, sync happens in background
 //
 
@@ -17,13 +18,13 @@ struct SessionConfirmationView: View {
     @Environment(SyncEngine.self) var syncEngine
     @State private var isHeated: Bool = true  // Default to heated session
     @State private var temperatureInput: Int = 95
-    @State private var selectedTypeId: UUID?
     @State private var selectedEffort: PerceivedEffort = .moderate
     @State private var isSaving = false
     @State private var showSavedAnimation = false
     @Namespace private var temperatureDialNamespace
     
     let workout: HKWorkout
+    let selectedSessionTypeId: UUID?  // Pre-selected in StartView
     let onComplete: () -> Void
     
     var body: some View {
@@ -32,7 +33,7 @@ struct SessionConfirmationView: View {
                 // Header
                 Text("Session Complete")
                     .font(.headline)
-                    .foregroundStyle(Color.HeatLab.coral)
+                    .foregroundStyle(Color.hlAccent)
                 
                 // Summary stats
                 HStack(spacing: 16) {
@@ -82,7 +83,7 @@ struct SessionConfirmationView: View {
                 
                 // Heated Session Toggle
                 Toggle("Heated Session", isOn: $isHeated)
-                    .tint(Color.HeatLab.coral)
+                    .tint(Color.hlAccent)
                 
                 // Temperature Dial (only shown when heated)
                 if isHeated {
@@ -100,26 +101,21 @@ struct SessionConfirmationView: View {
                 
                 Divider()
                 
-                // Session Type (Optional) - Compact grid
-                if !settings.visibleSessionTypes.isEmpty {
-                    Text("Session Type (Optional)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
-                        ForEach(settings.visibleSessionTypes) { typeConfig in
-                            SessionTypeButton(
-                                name: typeConfig.name,
-                                isSelected: selectedTypeId == typeConfig.id,
-                                action: {
-                                    selectedTypeId = selectedTypeId == typeConfig.id ? nil : typeConfig.id
-                                }
-                            )
-                        }
+                // Show selected session type (if any) - read-only display
+                if let typeId = selectedSessionTypeId,
+                   let typeName = settings.sessionTypeName(for: typeId) {
+                    HStack {
+                        Text("Session Type")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(typeName)
+                            .font(.caption.bold())
+                            .foregroundStyle(Color.hlAccent)
                     }
+                    
+                    Divider()
                 }
-
-                Divider()
 
                 // Perceived Effort - Wheel Picker
                 Text("Perceived Effort")
@@ -143,7 +139,7 @@ struct SessionConfirmationView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color.HeatLab.coral)
+                .tint(Color.hlAccent)
                 .disabled(isSaving)
                 .padding(.top, 8)
             }
@@ -182,7 +178,7 @@ struct SessionConfirmationView: View {
         // workoutUUID is now required - it's the unique key for upserts
         let session = WorkoutSession(workoutUUID: workout.uuid, startDate: workout.startDate, roomTemperature: roomTemperature)
         session.endDate = workout.endDate
-        session.sessionTypeId = selectedTypeId
+        session.sessionTypeId = selectedSessionTypeId  // Pre-selected in StartView
         session.perceivedEffort = selectedEffort
         // syncState is .pending by default - ready for background sync
         
@@ -208,33 +204,6 @@ struct SessionConfirmationView: View {
             print("Failed to save session: \(error)")
             isSaving = false  // Re-enable button only on error so user can retry
         }
-    }
-}
-
-// Helper view for session type selection buttons
-private struct SessionTypeButton: View {
-    let name: String
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(.caption2.bold())
-                }
-                Text(name)
-                    .font(.caption2)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .background(isSelected ? Color.HeatLab.coral : Color.gray.opacity(0.3))
-            .foregroundStyle(isSelected ? .white : .gray)
-            .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.md))
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -275,7 +244,7 @@ private struct EffortWheelPicker: View {
                 .font(.caption.bold())
                 .foregroundStyle(.white)
                 .frame(width: 56, height: 36)
-                .background(Color.HeatLab.coral)
+                .background(Color.hlAccent)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
 
             // Right tap zone - go next
@@ -325,14 +294,14 @@ private struct SavedAnimationOverlay: View {
                     // Animated ring
                     Circle()
                         .trim(from: 0, to: ringProgress)
-                        .stroke(Color.HeatLab.coral, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                        .stroke(Color.hlAccent, style: StrokeStyle(lineWidth: 4, lineCap: .round))
                         .frame(width: 60, height: 60)
                         .rotationEffect(.degrees(-90))
 
                     // Checkmark
                     Image(systemName: "checkmark")
                         .font(.system(size: 28, weight: .bold))
-                        .foregroundStyle(Color.HeatLab.coral)
+                        .foregroundStyle(Color.hlAccent)
                         .scaleEffect(checkmarkScale)
                         .opacity(checkmarkOpacity)
                 }

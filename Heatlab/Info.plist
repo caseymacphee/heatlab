@@ -7,8 +7,8 @@
 		<string>remote-notification</string>
 	</array>
 	<key>NSHealthShareUsageDescription</key>
-	<string>HeatLab reads your heart rate, workout data, and active calories to track your hot yoga sessions and show personalized insights.</string>
+	<string>HeatLab reads your heart rate, workout data, and active calories to track your sessions and show personalized insights.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>HeatLab saves your yoga workout sessions to Health.</string>
+	<string>HeatLab saves your workout sessions to Health.</string>
 </dict>
 </plist>

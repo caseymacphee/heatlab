@@ -2,7 +2,7 @@
 //  HealthKitImporter.swift
 //  heatlab
 //
-//  Service to fetch claimable yoga workouts from Apple Health
+//  Service to fetch claimable workouts from Apple Health
 //  Filters out already claimed sessions and dismissed workouts
 //
 
@@ -26,6 +26,26 @@ struct ClaimableWorkout: Identifiable, Hashable {
             .doubleValue(for: .kilocalorie()) ?? 0
     }
     
+    /// SF Symbol icon based on workout activity type
+    var icon: String {
+        switch workout.workoutActivityType {
+        case .yoga: return SFSymbol.yoga
+        case .pilates: return SFSymbol.pilates
+        case .barre: return SFSymbol.barre
+        default: return SFSymbol.yoga  // Fallback
+        }
+    }
+    
+    /// Display name for the workout type
+    var workoutTypeName: String {
+        switch workout.workoutActivityType {
+        case .yoga: return "Yoga"
+        case .pilates: return "Pilates"
+        case .barre: return "Barre"
+        default: return "Session"
+        }
+    }
+    
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
@@ -42,8 +62,8 @@ final class HealthKitImporter {
     /// Number of days to look back for importable workouts (free tier)
     static let freeTierLookbackDays: Int = 7
     
-    /// Number of days to look back for importable workouts (Pro tier)
-    static let proTierLookbackDays: Int = 365
+    /// Pro tier has unlimited lookback (nil means no date restriction)
+    static let proTierLookbackDays: Int? = nil
     
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
@@ -63,15 +83,21 @@ final class HealthKitImporter {
     
     // MARK: - Fetch Claimable Workouts
     
-    /// Fetches yoga workouts that haven't been claimed or dismissed
+    /// Fetches workouts that haven't been claimed or dismissed
     /// - Parameters:
     ///   - isPro: Whether user has Pro subscription (allows unlimited lookback)
+    ///   - enabledTypes: Set of workout type strings (e.g., "yoga", "pilates", "barre") to fetch
     ///   - includeDismissed: If true, includes previously dismissed workouts
     /// - Returns: Array of claimable workouts sorted by date (newest first)
-    func fetchClaimableWorkouts(isPro: Bool, includeDismissed: Bool = false) async throws -> [ClaimableWorkout] {
-        // 1. Fetch yoga workouts from HealthKit (lookback depends on tier)
-        let lookbackDays = isPro ? Self.proTierLookbackDays : Self.freeTierLookbackDays
-        let yogaWorkouts = try await fetchYogaWorkouts(lookbackDays: lookbackDays)
+    func fetchClaimableWorkouts(isPro: Bool, enabledTypes: Set<String>, includeDismissed: Bool = false) async throws -> [ClaimableWorkout] {
+        // Convert string types to HKWorkoutActivityType
+        let hkTypes = enabledTypes.compactMap { rawToHKType($0) }
+        guard !hkTypes.isEmpty else { return [] }
+        
+        // 1. Fetch workouts from HealthKit (lookback depends on tier)
+        // Pro tier has unlimited lookback (nil), free tier has limited days
+        let lookbackDays: Int? = isPro ? Self.proTierLookbackDays : Self.freeTierLookbackDays
+        let workouts = try await fetchWorkouts(lookbackDays: lookbackDays, types: Set(hkTypes))
         
         // 2. Get UUIDs of already claimed workouts (existing WorkoutSessions)
         let claimedUUIDs = try fetchClaimedWorkoutUUIDs()
@@ -83,7 +109,7 @@ final class HealthKitImporter {
         // 4. Filter and map to ClaimableWorkout
         var claimable: [ClaimableWorkout] = []
         
-        for workout in yogaWorkouts {
+        for workout in workouts {
             // Skip if already claimed as a WorkoutSession
             if claimedUUIDs.contains(workout.uuid) {
                 continue
@@ -108,10 +134,22 @@ final class HealthKitImporter {
     }
     
     /// Returns the count of claimable workouts (not dismissed)
-    /// - Parameter isPro: Whether user has Pro subscription (allows unlimited lookback)
-    func claimableWorkoutCount(isPro: Bool) async throws -> Int {
-        let workouts = try await fetchClaimableWorkouts(isPro: isPro, includeDismissed: false)
+    /// - Parameters:
+    ///   - isPro: Whether user has Pro subscription (allows unlimited lookback)
+    ///   - enabledTypes: Set of workout type strings (e.g., "yoga", "pilates", "barre") to fetch
+    func claimableWorkoutCount(isPro: Bool, enabledTypes: Set<String>) async throws -> Int {
+        let workouts = try await fetchClaimableWorkouts(isPro: isPro, enabledTypes: enabledTypes, includeDismissed: false)
         return workouts.count
+    }
+    
+    /// Convert raw string to HKWorkoutActivityType
+    private func rawToHKType(_ raw: String) -> HKWorkoutActivityType? {
+        switch raw {
+        case "yoga": return .yoga
+        case "pilates": return .pilates
+        case "barre": return .barre
+        default: return nil
+        }
     }
     
     // MARK: - Dismiss/Restore Workouts
@@ -132,6 +170,26 @@ final class HealthKitImporter {
             modelContext.insert(record)
         }
         
+        try modelContext.save()
+    }
+    
+    /// Dismisses multiple workouts at once
+    func dismissWorkouts(uuids: [UUID]) throws {
+        for uuid in uuids {
+            let targetUUID: UUID = uuid
+            let descriptor = FetchDescriptor<ImportedWorkout>(
+                predicate: #Predicate<ImportedWorkout> { item in
+                    item.workoutUUID == targetUUID
+                }
+            )
+            
+            if let existing = try modelContext.fetch(descriptor).first {
+                existing.dismiss()
+            } else {
+                let record = ImportedWorkout(workoutUUID: uuid, isDismissed: true)
+                modelContext.insert(record)
+            }
+        }
         try modelContext.save()
     }
     
@@ -235,36 +293,49 @@ final class HealthKitImporter {
     
     // MARK: - Private Helpers
     
-    /// Fetches yoga workouts from the past N days (inclusive of full Nth day)
-    /// - Parameter lookbackDays: Number of days to look back
-    private func fetchYogaWorkouts(lookbackDays: Int) async throws -> [HKWorkout] {
-        let calendar = Calendar.current
+    /// Fetches workouts of specified types from the past N days (inclusive of full Nth day)
+    /// - Parameters:
+    ///   - lookbackDays: Number of days to look back (nil means unlimited/all time)
+    ///   - types: Set of HKWorkoutActivityTypes to fetch
+    private func fetchWorkouts(lookbackDays: Int?, types: Set<HKWorkoutActivityType>) async throws -> [HKWorkout] {
+        guard !types.isEmpty else { return [] }
+        
         let endDate = Date()
         
-        // Use start of today to ensure the entire Nth day is included
-        // e.g., if lookbackDays=7 and today is Wednesday 3pm, startDate will be
-        // last Wednesday 12:00am (not 3pm), so a 9am class that day is included
-        let startOfToday = calendar.startOfDay(for: endDate)
-        guard let startDate = calendar.date(byAdding: .day, value: -lookbackDays, to: startOfToday) else {
-            return []
-        }
+        // Build OR predicate for multiple workout types
+        let typePredicates = types.map { HKQuery.predicateForWorkouts(with: $0) }
+        let workoutTypePredicate = NSCompoundPredicate(orPredicateWithSubpredicates: typePredicates)
         
-        // Predicate for yoga workouts in the date range
-        let workoutTypePredicate = HKQuery.predicateForWorkouts(with: .yoga)
-        let datePredicate = HKQuery.predicateForSamples(
-            withStart: startDate,
-            end: endDate,
-            options: .strictStartDate
-        )
-        let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-            workoutTypePredicate,
-            datePredicate
-        ])
+        // Build final predicate - add date filter only if lookbackDays is specified
+        let finalPredicate: NSPredicate
+        if let lookbackDays = lookbackDays {
+            let calendar = Calendar.current
+            // Use start of today to ensure the entire Nth day is included
+            // e.g., if lookbackDays=7 and today is Wednesday 3pm, startDate will be
+            // last Wednesday 12:00am (not 3pm), so a 9am class that day is included
+            let startOfToday = calendar.startOfDay(for: endDate)
+            guard let startDate = calendar.date(byAdding: .day, value: -lookbackDays, to: startOfToday) else {
+                return []
+            }
+            
+            let datePredicate = HKQuery.predicateForSamples(
+                withStart: startDate,
+                end: endDate,
+                options: .strictStartDate
+            )
+            finalPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                workoutTypePredicate,
+                datePredicate
+            ])
+        } else {
+            // Unlimited lookback - only filter by workout type
+            finalPredicate = workoutTypePredicate
+        }
         
         return try await withCheckedThrowingContinuation { continuation in
             let query = HKSampleQuery(
                 sampleType: .workoutType(),
-                predicate: compoundPredicate,
+                predicate: finalPredicate,
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]
             ) { _, samples, error in

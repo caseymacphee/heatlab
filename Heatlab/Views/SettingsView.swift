@@ -11,10 +11,14 @@ import StoreKit
 struct SettingsView: View {
     @Environment(UserSettings.self) var settings
     @Environment(SubscriptionManager.self) var subscriptionManager
-    @State private var showingAddTypeAlert = false
-    @State private var newTypeName = ""
+    @State private var showingAddTypeSheet = false
     @State private var showingPaywall = false
     @State private var isRestoring = false
+    
+    /// Whether Apple Intelligence is available on this device
+    private var isAIAvailable: Bool {
+        AnalysisInsightGenerator.isAvailable
+    }
     
     /// Send current settings to Watch
     private func syncSettingsToWatch() {
@@ -34,7 +38,7 @@ struct SettingsView: View {
                             Text("Heatlab Pro")
                         } icon: {
                             Image(systemName: "checkmark.seal.fill")
-                                .foregroundStyle(Color.HeatLab.coral)
+                                .foregroundStyle(Color.hlProHighlight)
                         }
                         Spacer()
                         Text("Active")
@@ -67,13 +71,13 @@ struct SettingsView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Upgrade to Pro")
                                         .foregroundStyle(.primary)
-                                    Text("Unlimited history, AI insights & more")
+                                    Text("Unlimited history, AI insights\(isAIAvailable ? "" : "*") & more")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
                             } icon: {
-                                Image(systemName: "flame.fill")
-                                    .foregroundStyle(Color.HeatLab.coral)
+                                Image(systemName: "checkmark.seal.fill")
+                                    .foregroundStyle(Color.hlProHighlight)
                             }
                             Spacer()
                             Image(systemName: SFSymbol.chevronRight)
@@ -150,15 +154,14 @@ struct SettingsView: View {
                 }
                 
                 Button {
-                    newTypeName = ""
-                    showingAddTypeAlert = true
+                    showingAddTypeSheet = true
                 } label: {
                     Label("Add Custom Type", systemImage: SFSymbol.add)
                 }
             } header: {
                 Text("Session Types")
             } footer: {
-                Text("Toggle visibility to show/hide types on Apple Watch. Swipe left on custom types to delete.")
+                Text("Toggle visibility to show/hide types on Apple Watch and in the claim portal. Swipe left on custom types to delete.")
             }
             
             // About Section
@@ -203,23 +206,18 @@ struct SettingsView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Color.hlBackground)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingPaywall) {
             PaywallView()
         }
-        .alert("Add Custom Type", isPresented: $showingAddTypeAlert) {
-            TextField("Type Name", text: $newTypeName)
-            Button("Cancel", role: .cancel) { }
-            Button("Add") {
-                let trimmedName = newTypeName.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmedName.isEmpty {
-                    settings.addCustomType(name: trimmedName)
-                    syncSettingsToWatch()
-                }
+        .sheet(isPresented: $showingAddTypeSheet) {
+            AddCustomTypeSheet { name, workoutType in
+                settings.addCustomType(name: name, workoutType: workoutType)
+                syncSettingsToWatch()
             }
-        } message: {
-            Text("Enter a name for your custom session type.")
         }
         // Sync Watch-relevant settings when they change
         .onChange(of: settings.showCaloriesOnWatch) { _, _ in
@@ -252,10 +250,18 @@ private struct SessionTypeRow: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(typeConfig.name)
-                if typeConfig.isDefault {
-                    Text("Default")
+                HStack(spacing: 4) {
+                    Text(typeConfig.workoutType.displayName)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                    if typeConfig.isDefault {
+                        Text("•")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Text("Default")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             
@@ -268,6 +274,66 @@ private struct SessionTypeRow: View {
                     onToggleVisibility(newValue)
                 }
         }
+    }
+}
+
+// MARK: - Add Custom Type Sheet
+
+private struct AddCustomTypeSheet: View {
+    @Environment(\.dismiss) var dismiss
+    @State private var name = ""
+    @State private var workoutType = "yoga"
+    
+    let onAdd: (String, String) -> Void
+    
+    private var isValid: Bool {
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Name", text: $name)
+                        .autocorrectionDisabled()
+                } header: {
+                    Text("Session Type Name")
+                }
+                
+                Section {
+                    Picker("Workout Type", selection: $workoutType) {
+                        ForEach(WorkoutTypeRaw.allCases, id: \.rawValue) { type in
+                            Text(type.displayName).tag(type.rawValue)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                } header: {
+                    Text("Apple Health Workout Type")
+                } footer: {
+                    Text("This determines how the workout is recorded in Apple Health.")
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Color.hlBackground)
+            .navigationTitle("Add Custom Type")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                        onAdd(trimmedName, workoutType)
+                        dismiss()
+                    }
+                    .disabled(!isValid)
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }
 

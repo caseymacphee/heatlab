@@ -16,6 +16,16 @@ struct PaywallView: View {
     @State private var showingError = false
     @State private var errorMessage = ""
     
+    /// Apple Intelligence availability status
+    private var aiStatus: AppleIntelligenceStatus {
+        AnalysisInsightGenerator.availabilityStatus
+    }
+    
+    /// Whether Apple Intelligence is available on this device
+    private var isAIAvailable: Bool {
+        aiStatus.isAvailable
+    }
+    
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -50,7 +60,7 @@ struct PaywallView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Heatlab Pro")
+            .navigationTitle("HeatLab Pro")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -82,14 +92,22 @@ struct PaywallView: View {
     
     private var headerSection: some View {
         VStack(spacing: 12) {
-            Image(systemName: "flame.fill")
+            Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 60))
-                .foregroundStyle(LinearGradient.heatLabPrimary)
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(
+                    Color.white,
+                    LinearGradient(
+                        colors: [Color.hlProHighlight, Color.hlProHighlight.opacity(0.85)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
             
             Text("Unlock Your Full Potential")
                 .font(.title2.bold())
             
-            Text("Free includes 7 days of history. Pro unlocks 1M, 3M, and 1Y analysis, plus AI insights and detailed period comparisons.")
+            Text("Free includes 7 days of history. Pro unlocks 1M, 3M, and 1Y analysis, plus AI insights\(isAIAvailable ? "" : "*") and detailed period comparisons.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -104,22 +122,37 @@ struct PaywallView: View {
             ForEach(ProFeature.allCases, id: \.self) { feature in
                 HStack(spacing: 12) {
                     Image(systemName: feature.iconName)
-                        .foregroundStyle(Color.HeatLab.coral)
+                        .foregroundStyle(Color.hlAccent)
                         .frame(width: 24)
                     
-                    Text(feature.rawValue)
-                        .font(.subheadline)
+                    // Show asterisk for AI insights if not available on this device
+                    if feature == .aiInsights && !isAIAvailable {
+                        Text("\(feature.rawValue)*")
+                            .font(.subheadline)
+                    } else {
+                        Text(feature.rawValue)
+                            .font(.subheadline)
+                    }
                     
                     Spacer()
                     
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(Color.white, Color.hlProHighlight)
                 }
+            }
+            
+            // AI insights footnote (only show if AI not available, with specific reason)
+            if let disclaimer = aiStatus.disclaimer {
+                Text("*\(disclaimer)")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .padding(.top, 4)
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.lg))
+        .background(Color.hlSurface)
+        .clipShape(RoundedRectangle(cornerRadius: HLRadius.card))
     }
     
     // MARK: - Subscription Cards
@@ -171,7 +204,7 @@ struct PaywallView: View {
             .frame(height: 50)
         }
         .buttonStyle(.borderedProminent)
-        .tint(Color.HeatLab.coral)
+        .tint(Color.hlAccent)
         .disabled(selectedProduct == nil || subscriptionManager.purchaseState == .purchasing)
     }
     
@@ -293,7 +326,7 @@ private struct SubscriptionCard: View {
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(Color.HeatLab.coral)
+                                .background(Color.hlProHighlight)
                                 .clipShape(Capsule())
                         }
                     }
@@ -323,13 +356,14 @@ private struct SubscriptionCard: View {
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: HeatLabRadius.md)
-                    .fill(isSelected ? Color.HeatLab.coral.opacity(0.1) : Color(.systemGray6))
+                RoundedRectangle(cornerRadius: HLRadius.card)
+                    .fill(isSelected ? Color.hlProHighlight.opacity(0.1) : Color.hlSurface)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: HeatLabRadius.md)
-                    .strokeBorder(isSelected ? Color.HeatLab.coral : Color.clear, lineWidth: 2)
+                RoundedRectangle(cornerRadius: HLRadius.card)
+                    .strokeBorder(isSelected ? Color.hlProHighlight : Color.clear, lineWidth: isSelected ? 2.5 : 0)
             )
+            .shadow(color: isSelected ? Color.hlProHighlight.opacity(0.15) : .clear, radius: 8, y: 2)
         }
         .buttonStyle(.plain)
     }

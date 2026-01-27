@@ -2,7 +2,7 @@
 //  WorkoutManager.swift
 //  Heatlab Watch Watch App
 //
-//  Manages HealthKit workout sessions for hot yoga tracking
+//  Manages HealthKit workout sessions for heat training
 //
 
 import HealthKit
@@ -40,6 +40,9 @@ final class WorkoutManager: NSObject {
     // Completed workout stored directly from builder
     var completedWorkout: HKWorkout?
     
+    // Session type selected pre-workout (passed to confirmation view)
+    var selectedSessionTypeId: UUID?
+    
     // Live metrics
     var heartRate: Double = 0
     var activeCalories: Double = 0
@@ -70,8 +73,8 @@ final class WorkoutManager: NSObject {
     
     // MARK: - Workout Control
     
-    func start() async throws {
-        print("🏃 start() called, current phase: \(phase)")
+    func start(activityType: HKWorkoutActivityType = .yoga) async throws {
+        print("🏃 start() called, current phase: \(phase), activityType: \(activityType.rawValue)")
         guard phase == .idle else {
             print("⚠️ start() aborted - phase is not idle: \(phase)")
             return
@@ -82,9 +85,9 @@ final class WorkoutManager: NSObject {
         
         do {
             let config = HKWorkoutConfiguration()
-            config.activityType = .yoga
+            config.activityType = activityType
             config.locationType = .indoor
-            print("🏃 config created")
+            print("🏃 config created with activityType: \(activityType.rawValue)")
             
             session = try HKWorkoutSession(healthStore: healthStore, configuration: config)
             print("🏃 session created: \(session != nil)")
@@ -163,6 +166,7 @@ final class WorkoutManager: NSObject {
         session = nil
         builder = nil
         completedWorkout = nil
+        selectedSessionTypeId = nil
         heartRate = 0
         activeCalories = 0
         elapsedTime = 0

@@ -2,7 +2,7 @@
 //  ClaimListView.swift
 //  heatlab
 //
-//  List of claimable Apple Health yoga workouts
+//  List of claimable Apple Health workouts
 //  Swipe left to dismiss, tap to claim
 //
 
@@ -30,11 +30,11 @@ struct ClaimListView: View {
                 HStack {
                     Toggle("Show Dismissed", isOn: $showDismissed)
                         .font(.subheadline)
-                        .tint(Color.HeatLab.coral)
+                        .tint(Color.hlAccent)
                 }
                 .padding(.horizontal)
                 .padding(.vertical, HeatLabSpacing.sm)
-                .background(Color(.systemGray6))
+                .background(Color.hlSurface2)
             }
             
             Group {
@@ -60,7 +60,7 @@ struct ClaimListView: View {
                 }
             }
         }
-        .navigationTitle("Import Workouts")
+        .navigationTitle("Claim Workouts")
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await loadWorkouts()
@@ -79,6 +79,21 @@ struct ClaimListView: View {
                     Task { await loadWorkouts() }
                 }
             )
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button(role: .destructive) {
+                        dismissAllRemaining()
+                    } label: {
+                        Label("Dismiss All Remaining", systemImage: "xmark.circle")
+                    }
+                    .disabled(workouts.filter { !$0.isDismissed }.isEmpty)
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .disabled(workouts.filter { !$0.isDismissed }.isEmpty)
+            }
         }
     }
     
@@ -100,9 +115,9 @@ struct ClaimListView: View {
                 )
             } description: {
                 if showDismissed {
-                    Text("No yoga workouts found in the \(lookbackDescription).")
+                    Text("No workouts found in the \(lookbackDescription).")
                 } else {
-                    Text("You've reviewed all available yoga workouts from the \(lookbackDescription).")
+                    Text("You've reviewed all available workouts from the \(lookbackDescription).")
                 }
             } actions: {
                 if !showDismissed {
@@ -115,7 +130,7 @@ struct ClaimListView: View {
             
             // Upgrade prompt for free users
             if !subscriptionManager.isPro {
-                ImportHistoryUpgradeBanner {
+                ClaimHistoryUpgradeBanner {
                     showingPaywall = true
                 }
                 .padding(.horizontal)
@@ -165,7 +180,7 @@ struct ClaimListView: View {
             // Upgrade prompt for free users at the end of the list
             if !subscriptionManager.isPro {
                 Section {
-                    ImportHistoryUpgradeBanner {
+                    ClaimHistoryUpgradeBanner {
                         showingPaywall = true
                     }
                     .listRowInsets(EdgeInsets())
@@ -194,6 +209,7 @@ struct ClaimListView: View {
             // Fetch claimable workouts (lookback depends on subscription tier)
             workouts = try await importer.fetchClaimableWorkouts(
                 isPro: subscriptionManager.isPro,
+                enabledTypes: settings.enabledWorkoutTypes,
                 includeDismissed: showDismissed
             )
         } catch {
@@ -230,6 +246,21 @@ struct ClaimListView: View {
             print("Failed to restore workout: \(error)")
         }
     }
+    
+    private func dismissAllRemaining() {
+        let toDismiss = workouts.filter { !$0.isDismissed }
+        guard !toDismiss.isEmpty else { return }
+        
+        let importer = HealthKitImporter(modelContext: modelContext)
+        do {
+            try importer.dismissWorkouts(uuids: toDismiss.map { $0.id })
+            withAnimation {
+                workouts.removeAll { !$0.isDismissed }
+            }
+        } catch {
+            print("Failed to dismiss workouts: \(error)")
+        }
+    }
 }
 
 // MARK: - Workout Row
@@ -240,10 +271,10 @@ struct ClaimableWorkoutRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Yoga icon
-            Image(systemName: SFSymbol.yoga)
+            // Session icon (matches workout type)
+            Image(systemName: workout.icon)
                 .font(.title2)
-                .foregroundStyle(workout.isDismissed ? .secondary : Color.HeatLab.coral)
+                .foregroundStyle(workout.isDismissed ? .secondary : Color.hlAccent)
                 .frame(width: 40)
             
             VStack(alignment: .leading, spacing: 4) {
@@ -317,10 +348,10 @@ struct ClaimableWorkoutRow: View {
     }
 }
 
-// MARK: - Import History Upgrade Banner
+// MARK: - Claim History Upgrade Banner
 
-/// Banner shown to free users to upsell importing older workouts
-struct ImportHistoryUpgradeBanner: View {
+/// Banner shown to free users to upsell claiming older workouts
+struct ClaimHistoryUpgradeBanner: View {
     let onTap: () -> Void
     
     var body: some View {
@@ -329,16 +360,16 @@ struct ImportHistoryUpgradeBanner: View {
                 HStack(spacing: 12) {
                     Image(systemName: "calendar.badge.clock")
                         .font(.title2)
-                        .foregroundStyle(Color.HeatLab.coral)
+                        .foregroundStyle(Color.hlAccent)
                     
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
-                            Text("Import Older Workouts")
+                            Text("Claim Older Workouts")
                                 .font(.subheadline.bold())
                             ProBadge(style: .compact)
                         }
                         
-                        Text("Access up to 1 year of yoga history from Apple Health")
+                        Text("Access unlimited workout history from Apple Health")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -350,20 +381,20 @@ struct ImportHistoryUpgradeBanner: View {
                     Spacer()
                     Text("View Plans")
                         .font(.caption.bold())
-                        .foregroundStyle(Color.HeatLab.coral)
+                        .foregroundStyle(Color.hlAccent)
                     Image(systemName: SFSymbol.chevronRight)
                         .font(.caption2)
-                        .foregroundStyle(Color.HeatLab.coral)
+                        .foregroundStyle(Color.hlAccent)
                 }
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: HeatLabRadius.lg)
-                    .fill(Color.HeatLab.coral.opacity(0.08))
+                RoundedRectangle(cornerRadius: HLRadius.card)
+                    .fill(Color.hlAccent.opacity(0.08))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: HeatLabRadius.lg)
-                    .strokeBorder(Color.HeatLab.coral.opacity(0.25), lineWidth: 1)
+                RoundedRectangle(cornerRadius: HLRadius.card)
+                    .strokeBorder(Color.hlAccent.opacity(0.25), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -379,7 +410,7 @@ struct ImportHistoryUpgradeBanner: View {
     .environment(SubscriptionManager())
 }
 
-#Preview("Import History Upgrade Banner") {
-    ImportHistoryUpgradeBanner { }
+#Preview("Claim History Upgrade Banner") {
+    ClaimHistoryUpgradeBanner { }
         .padding()
 }

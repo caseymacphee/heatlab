@@ -39,12 +39,23 @@ struct UpgradePromptCard: View {
     let feature: ProFeature
     let onTap: () -> Void
     
+    /// Apple Intelligence availability status
+    private var aiStatus: AppleIntelligenceStatus {
+        AnalysisInsightGenerator.availabilityStatus
+    }
+    
+    /// Get the unavailable hint for this feature (if applicable)
+    private var unavailableHint: String? {
+        guard feature.hasDeviceRequirements else { return nil }
+        return aiStatus.unavailableHint
+    }
+    
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
                 Image(systemName: feature.iconName)
                     .font(.title2)
-                    .foregroundStyle(Color.HeatLab.coral.opacity(0.7))
+                    .foregroundStyle(Color.hlAccent.opacity(0.7))
                 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
@@ -58,6 +69,13 @@ struct UpgradePromptCard: View {
                     Text("Upgrade to unlock this feature")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    
+                    // Show hint if feature not available on this device (with specific reason)
+                    if let hint = unavailableHint {
+                        Text(hint)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
                 
                 Spacer()
@@ -68,12 +86,12 @@ struct UpgradePromptCard: View {
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: HeatLabRadius.lg)
-                    .fill(Color.HeatLab.coral.opacity(0.08))
+                RoundedRectangle(cornerRadius: HLRadius.card)
+                    .fill(Color.hlAccent.opacity(0.08))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: HeatLabRadius.lg)
-                    .strokeBorder(Color.HeatLab.coral.opacity(0.2), lineWidth: 1)
+                RoundedRectangle(cornerRadius: HLRadius.card)
+                    .strokeBorder(Color.hlAccent.opacity(0.2), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -92,7 +110,7 @@ struct UpgradeInlineBanner: View {
             HStack(spacing: 8) {
                 Image(systemName: "lock.fill")
                     .font(.caption)
-                    .foregroundStyle(Color.HeatLab.coral)
+                    .foregroundStyle(Color.hlAccent)
                 
                 Text(message)
                     .font(.caption)
@@ -102,12 +120,12 @@ struct UpgradeInlineBanner: View {
                 
                 Text("Upgrade")
                     .font(.caption.bold())
-                    .foregroundStyle(Color.HeatLab.coral)
+                    .foregroundStyle(Color.hlAccent)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(Color.HeatLab.coral.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.sm))
+            .background(Color.hlAccent.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: HLRadius.chip))
         }
         .buttonStyle(.plain)
     }
@@ -133,7 +151,7 @@ struct ProBadge: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
-                .background(Color.HeatLab.coral)
+                .background(Color.hlAccent)
                 .clipShape(Capsule())
             
         case .compact:
@@ -142,13 +160,13 @@ struct ProBadge: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 4)
                 .padding(.vertical, 1)
-                .background(Color.HeatLab.coral)
+                .background(Color.hlAccent)
                 .clipShape(Capsule())
             
         case .lock:
             Image(systemName: "lock.fill")
                 .font(.caption2)
-                .foregroundStyle(Color.HeatLab.coral)
+                .foregroundStyle(Color.hlAccent)
         }
     }
 }
@@ -165,7 +183,7 @@ struct HistoryLimitBanner: View {
             VStack(spacing: 8) {
                 HStack {
                     Image(systemName: "calendar")
-                        .foregroundStyle(Color.HeatLab.coral)
+                        .foregroundStyle(Color.hlAccent)
                     
                     Text("\(sessionCount) older session\(sessionCount == 1 ? "" : "s") hidden")
                         .font(.subheadline.bold())
@@ -182,20 +200,20 @@ struct HistoryLimitBanner: View {
                     Spacer()
                     Text("View Plans")
                         .font(.caption.bold())
-                        .foregroundStyle(Color.HeatLab.coral)
+                        .foregroundStyle(Color.hlAccent)
                     Image(systemName: SFSymbol.chevronRight)
                         .font(.caption2)
-                        .foregroundStyle(Color.HeatLab.coral)
+                        .foregroundStyle(Color.hlAccent)
                 }
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: HeatLabRadius.lg)
-                    .fill(Color.HeatLab.coral.opacity(0.08))
+                RoundedRectangle(cornerRadius: HLRadius.card)
+                    .fill(Color.hlAccent.opacity(0.08))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: HeatLabRadius.lg)
-                    .strokeBorder(Color.HeatLab.coral.opacity(0.25), lineWidth: 1)
+                RoundedRectangle(cornerRadius: HLRadius.card)
+                    .strokeBorder(Color.hlAccent.opacity(0.25), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)

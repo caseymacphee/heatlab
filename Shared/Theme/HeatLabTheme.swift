@@ -7,16 +7,41 @@
 
 import SwiftUI
 
-// MARK: - Brand Colors
+// MARK: - Design System Colors (Asset Catalog)
+
+extension Color {
+    /// Warm cream background (#F6F1E8 light, #000000 dark)
+    static let hlBackground = Color("Background")
+    /// Card/elevated surface (#FFFFFF light, #1C1C1E dark)
+    static let hlSurface = Color("Surface")
+    /// Secondary surface (#EFE6DA light, #2C2C2E dark)
+    static let hlSurface2 = Color("Surface2")
+    /// Primary text (#1A1A18 light, #FFFFFF dark)
+    static let hlText = Color("TextPrimary")
+    /// Muted/secondary text (#6A645B light, #98989D dark)
+    static let hlMuted = Color("TextMuted")
+    /// Heated clay accent (#C96A4A) - uses system AccentColor
+    static let hlAccent = Color.accentColor
+    /// Cool/recovery state (#4F8FA3 light, #64D2FF dark)
+    static let hlCool = Color("Cool")
+    /// Good/positive state (#6E907B light, #30D158 dark)
+    static let hlGood = Color("Good")
+    /// Grid/divider lines (#E6DED2 light, #38383A dark)
+    static let hlGrid = Color("Grid")
+    /// Pro highlight - warm honey (#D4A24A light, #B8862F dark)
+    static let hlProHighlight = Color("ProHighlight")
+}
+
+// MARK: - Legacy Brand Colors (Deprecated - use hl* colors)
 
 extension Color {
     /// Heat Lab brand color palette
     enum HeatLab {
-        // Primary Brand Colors
-        /// Brand coral - primary accent color (#FF4D2D)
-        static let coral = Color(red: 1.0, green: 0.302, blue: 0.176)
-        /// Lighter coral for dark mode accent (#FF6A55)
-        static let coralLight = Color(red: 1.0, green: 0.416, blue: 0.333)
+        // Primary Brand Colors - now mapped to design system
+        /// Brand accent - heated clay (#C96A4A)
+        static let coral = Color.hlAccent
+        /// Lighter coral for dark mode accent - use hlAccent instead
+        static let coralLight = Color.hlAccent
         /// Deep heat - use sparingly for extreme temps (#E23B33)
         static let deepHeat = Color(red: 0.886, green: 0.231, blue: 0.200)
 
@@ -98,6 +123,17 @@ enum HeatLabSpacing {
     static let xxl: CGFloat = 32
 }
 
+/// Design system spacing constants
+enum HLSpacing {
+    static let micro: CGFloat = 4
+    static let small: CGFloat = 8
+    static let medium: CGFloat = 12
+    static let standard: CGFloat = 16
+    static let comfortable: CGFloat = 20
+    static let section: CGFloat = 24
+    static let major: CGFloat = 32
+}
+
 // MARK: - Corner Radius Constants
 
 enum HeatLabRadius {
@@ -109,6 +145,15 @@ enum HeatLabRadius {
     static let lg: CGFloat = 16
     /// Large modal sheets
     static let xl: CGFloat = 20
+}
+
+/// Design system corner radius constants
+enum HLRadius {
+    static let card: CGFloat = 14
+    static let button: CGFloat = 12
+    static let chip: CGFloat = 8
+    static let input: CGFloat = 10
+    static let badge: CGFloat = 6
 }
 
 // MARK: - Shadow Presets
@@ -141,6 +186,9 @@ enum SFSymbol {
     static let waveform = "waveform.path.ecg"
     static let thermometer = "thermometer.medium"
     static let yoga = "figure.yoga"
+    static let pilates = "figure.pilates"
+    static let barre = "figure.barre"
+    static let mindAndBody = "figure.mind.and.body"
 
     // Actions
     static let play = "play.circle"
@@ -157,6 +205,8 @@ enum SFSymbol {
     static let edit = "pencil"
     static let checkmark = "checkmark"
     static let xmark = "xmark"
+    static let claim = "tag"       // Claim workouts (toolbar, low chrome)
+    static let claimFill = "tag.fill"  // Claim workouts (CTA, high intent)
 
     // Status/Comparison
     static let arrowUp = "arrow.up.circle"

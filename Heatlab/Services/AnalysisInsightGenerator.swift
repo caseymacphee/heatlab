@@ -8,6 +8,164 @@
 import Foundation
 import FoundationModels
 import Observation
+#if canImport(UIKit)
+import UIKit
+#endif
+
+// MARK: - Apple Intelligence Availability
+
+/// Detailed availability status for Apple Intelligence features
+enum AppleIntelligenceStatus {
+    /// Apple Intelligence is available and ready to use
+    case available
+    /// Device hardware supports AI, but iOS needs to be updated to 18.1+
+    case needsOSUpdate
+    /// Device hardware does not support Apple Intelligence (older than iPhone 15 Pro)
+    case hardwareNotSupported
+    /// Running on simulator (AI not available)
+    case simulator
+    
+    var isAvailable: Bool {
+        self == .available
+    }
+    
+    /// User-facing hint for unavailable states
+    var unavailableHint: String? {
+        switch self {
+        case .available:
+            return nil
+        case .needsOSUpdate:
+            return "Update to iOS 18.1 to enable"
+        case .hardwareNotSupported:
+            return "Not available on this device"
+        case .simulator:
+            return "Not available in simulator"
+        }
+    }
+    
+    /// Full disclaimer for footnotes
+    var disclaimer: String? {
+        switch self {
+        case .available:
+            return nil
+        case .needsOSUpdate:
+            return "Requires iOS 18.1 or later. Update your device to enable AI insights."
+        case .hardwareNotSupported:
+            return "Requires an Apple Intelligence–compatible device (e.g., iPhone 15 Pro or later)."
+        case .simulator:
+            return "Apple Intelligence is not available in the simulator."
+        }
+    }
+}
+
+/// Helper to determine Apple Intelligence availability with detailed status
+enum AppleIntelligenceChecker {
+    /// Minimum iOS version required for Apple Intelligence
+    private static let minimumOSVersion = OperatingSystemVersion(majorVersion: 18, minorVersion: 1, patchVersion: 0)
+    
+    /// iPhone models that support Apple Intelligence (A17 Pro or later)
+    /// iPhone 15 Pro: iPhone16,1
+    /// iPhone 15 Pro Max: iPhone16,2
+    /// iPhone 16: iPhone17,3
+    /// iPhone 16 Plus: iPhone17,4
+    /// iPhone 16 Pro: iPhone17,1
+    /// iPhone 16 Pro Max: iPhone17,2
+    private static let supportedIPhoneModels: Set<String> = [
+        "iPhone16,1", "iPhone16,2",  // iPhone 15 Pro, 15 Pro Max
+        "iPhone17,1", "iPhone17,2", "iPhone17,3", "iPhone17,4"  // iPhone 16 series
+    ]
+    
+    /// Get the current device's machine identifier
+    private static var machineIdentifier: String {
+        var systemInfo = utsname()
+        uname(&systemInfo)
+        let machineMirror = Mirror(reflecting: systemInfo.machine)
+        let identifier = machineMirror.children.reduce("") { identifier, element in
+            guard let value = element.value as? Int8, value != 0 else { return identifier }
+            return identifier + String(UnicodeScalar(UInt8(value)))
+        }
+        return identifier
+    }
+    
+    /// Check if running on simulator
+    private static var isSimulator: Bool {
+        #if targetEnvironment(simulator)
+        return true
+        #else
+        return ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] != nil
+        #endif
+    }
+    
+    /// Check if current iOS version meets minimum requirement
+    private static var hasRequiredOSVersion: Bool {
+        ProcessInfo.processInfo.isOperatingSystemAtLeast(minimumOSVersion)
+    }
+    
+    /// Check if device hardware supports Apple Intelligence
+    private static var hasRequiredHardware: Bool {
+        let machine = machineIdentifier
+        
+        // On simulator, check the simulated device
+        if isSimulator {
+            // Simulators report "x86_64" or "arm64" - can't determine simulated device model easily
+            // For simulator, we'll assume hardware is supported to test the flow
+            return true
+        }
+        
+        // Check if it's a supported iPhone model
+        if supportedIPhoneModels.contains(machine) {
+            return true
+        }
+        
+        // Also support future iPhone models (iPhone18,x, etc.)
+        if machine.hasPrefix("iPhone") {
+            // Extract the major version number
+            let versionPart = machine.dropFirst(6) // Remove "iPhone"
+            if let majorVersion = Int(versionPart.prefix(while: { $0.isNumber })) {
+                // iPhone17 and later support Apple Intelligence
+                // (iPhone16,1 and iPhone16,2 are special cases - 15 Pro models)
+                if majorVersion >= 17 {
+                    return true
+                }
+                // For iPhone16,x only 16,1 and 16,2 (15 Pro models) are supported
+                if majorVersion == 16 {
+                    return supportedIPhoneModels.contains(machine)
+                }
+            }
+        }
+        
+        return false
+    }
+    
+    /// Get detailed availability status
+    static var status: AppleIntelligenceStatus {
+        // Check simulator first
+        if isSimulator {
+            return .simulator
+        }
+        
+        // Check hardware support
+        if !hasRequiredHardware {
+            return .hardwareNotSupported
+        }
+        
+        // Check OS version
+        if !hasRequiredOSVersion {
+            return .needsOSUpdate
+        }
+        
+        // Final check: is the model actually available?
+        // This catches edge cases like user having AI disabled in settings
+        if SystemLanguageModel.default.isAvailable {
+            return .available
+        }
+        
+        // If we get here, hardware and OS are good but AI still not available
+        // This could be due to user settings, region, or other factors
+        // Treat as needs OS update since that's the most actionable
+        return .needsOSUpdate
+    }
+}
 
 @Observable
 final class AnalysisInsightGenerator {
@@ -20,16 +178,12 @@ final class AnalysisInsightGenerator {
     /// Check if Apple Intelligence is available on this device
     /// Returns false on simulators since AI models don't work there
     static var isAvailable: Bool {
-        // Check if running on simulator
-        #if targetEnvironment(simulator)
-        return false
-        #else
-        // Also check at runtime in case compile-time check doesn't catch it
-        if ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] != nil {
-            return false
-        }
-        return SystemLanguageModel.default.isAvailable
-        #endif
+        AppleIntelligenceChecker.status.isAvailable
+    }
+    
+    /// Get detailed availability status for UI messaging
+    static var availabilityStatus: AppleIntelligenceStatus {
+        AppleIntelligenceChecker.status
     }
     
     @MainActor
@@ -125,7 +279,7 @@ final class AnalysisInsightGenerator {
         }
         
         return """
-        Generate a brief, insightful 2-3 sentence analysis of this user's heated yoga practice data.
+        Generate a brief, insightful 2-3 sentence analysis of this user's heated practice data.
         
         \(filterContext)
         \(currentStats)\(previousStats)\(acclimationContext)

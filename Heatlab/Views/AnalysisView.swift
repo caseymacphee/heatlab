@@ -102,6 +102,7 @@ struct AnalysisView: View {
             .padding()
             .padding(.bottom, 20)  // Extra padding to avoid tab bar clipping
         }
+        .background(Color.hlBackground)
         .navigationTitle("Analysis")
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -139,7 +140,7 @@ struct AnalysisView: View {
     // MARK: - Period Picker Section
 
     private var periodPickerSection: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             ForEach(AnalysisPeriod.allCases) { period in
                 PeriodButton(
                     period: period,
@@ -154,6 +155,11 @@ struct AnalysisView: View {
                 }
             }
         }
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: HLRadius.chip + 4)
+                .fill(Color.hlSurface2)
+        )
         .sheet(isPresented: $showingPaywall) {
             PaywallView()
         }
@@ -189,7 +195,7 @@ struct AnalysisView: View {
                 } label: {
                     Image(systemName: showTrendLine ? "chart.line.uptrend.xyaxis.circle.fill" : "chart.line.uptrend.xyaxis.circle")
                         .font(.title3)
-                        .foregroundStyle(showTrendLine ? Color.HeatLab.coral : .secondary)
+                        .foregroundStyle(showTrendLine ? Color.hlAccent : Color.hlMuted)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Trend line")
@@ -430,7 +436,7 @@ struct AnalysisView: View {
     private var emptyStateView: some View {
         ContentUnavailableView(
             "No Sessions Found",
-            systemImage: "flame.fill",
+            systemImage: SFSymbol.mindAndBody,
             description: Text(emptyStateDescription)
         )
         .frame(height: 250)
@@ -457,18 +463,18 @@ struct AnalysisView: View {
     
     private func acclimationHint(sessionsNeeded: Int) -> some View {
         HStack(spacing: 10) {
-            Image(systemName: SFSymbol.fireFill)
-                .foregroundStyle(Color.HeatLab.coral)
+            Image(systemName: SFSymbol.thermometer)
+                .foregroundStyle(Color.hlAccent)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Building Your Heat Baseline")
                     .font(.subheadline.bold())
                 Text("\(sessionsNeeded) more session\(sessionsNeeded == 1 ? "" : "s") needed to track heat acclimation progress")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.hlMuted)
             }
         }
-        .heatLabHintCard(color: Color.HeatLab.coral)
+        .heatLabHintCard(color: Color.hlAccent)
     }
     
     // MARK: - Chart Helpers
@@ -686,24 +692,24 @@ private struct PeriodButton: View {
     let isSelected: Bool
     let isLocked: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
                 Text(period.rawValue)
                     .font(.subheadline.weight(isSelected ? .semibold : .regular))
-                
+
                 if isLocked {
                     Image(systemName: "lock.fill")
                         .font(.caption2)
                 }
             }
-            .foregroundStyle(isSelected ? .white : (isLocked ? .secondary : .primary))
+            .foregroundStyle(isSelected ? Color.hlText : (isLocked ? Color.hlMuted : Color.hlText))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
             .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? Color.HeatLab.coral : Color(.systemGray5))
+                RoundedRectangle(cornerRadius: HLRadius.chip)
+                    .fill(isSelected ? Color.hlSurface : Color.hlSurface2)
             )
         }
         .buttonStyle(.plain)
@@ -828,8 +834,8 @@ private struct TemperatureLegendSheet: View {
                         }
                     }
                 }
-                .background(Color(.systemGray6))
-                .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.md))
+                .background(Color.hlSurface)
+                .clipShape(RoundedRectangle(cornerRadius: HLRadius.card))
                 .padding(.horizontal)
                 
                 Spacer()

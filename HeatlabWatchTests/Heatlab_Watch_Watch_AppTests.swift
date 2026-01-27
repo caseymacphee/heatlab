@@ -6,7 +6,7 @@
 //
 
 import Testing
-@testable import HeatlabWatch
+@testable import HeatLabWatch
 
 struct HeatlabWatchTests {
 

@@ -7,8 +7,9 @@
 
 import XCTest
 import SwiftData
-@testable import heatlab
+@testable import HeatLab
 
+@MainActor
 final class BaselineEngineTests: XCTestCase {
     var modelContainer: ModelContainer!
     var modelContext: ModelContext!

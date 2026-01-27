@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>NSHealthShareUsageDescription</key>
-	<string>HeatLab reads your heart rate and workout data to track your hot yoga sessions.</string>
+	<string>HeatLab reads your heart rate and workout data to track your sessions.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>HeatLab saves your yoga workout sessions to Health.</string>
+	<string>HeatLab saves your workout sessions to Health.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>workout-processing</string>

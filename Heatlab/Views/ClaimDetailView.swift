@@ -19,7 +19,7 @@ struct ClaimDetailView: View {
     let onClaimed: () -> Void
     
     // Edit state
-    @State private var isHeated: Bool = true  // Default to heated for yoga
+    @State private var isHeated: Bool = true  // Default to heated
     @State private var temperature: Int = 95
     @State private var sessionTypeId: UUID? = nil
     @State private var perceivedEffort: PerceivedEffort = .none
@@ -61,8 +61,8 @@ struct ClaimDetailView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.md))
+                    .background(Color.hlSurface)
+                    .clipShape(RoundedRectangle(cornerRadius: HLRadius.card))
                 } else if averageHR > 0 {
                     heartRatePreviewSection
                 }
@@ -86,7 +86,7 @@ struct ClaimDetailView: View {
             }
             .padding()
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.hlBackground)
         .navigationTitle("Claim Workout")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -118,12 +118,12 @@ struct ClaimDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             // Date and time
             HStack {
-                Image(systemName: SFSymbol.yoga)
+                Image(systemName: workout.icon)
                     .font(.title)
-                    .foregroundStyle(Color.HeatLab.coral)
+                    .foregroundStyle(Color.hlAccent)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Yoga Session")
+                    Text(workout.workoutTypeName)
                         .font(.title2.bold())
                     Text(workout.startDate.formatted(date: .complete, time: .shortened))
                         .font(.subheadline)
@@ -169,7 +169,7 @@ struct ClaimDetailView: View {
     @ViewBuilder
     private var heatedToggleSection: some View {
         Toggle("Heated Session", isOn: $isHeated.animation(.easeInOut(duration: 0.2)))
-            .tint(Color.HeatLab.coral)
+            .tint(Color.hlAccent)
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 16)
@@ -329,9 +329,9 @@ struct ClaimDetailView: View {
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.HeatLab.coral)
+            .background(Color.hlAccent)
             .foregroundStyle(.white)
-            .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.md))
+            .clipShape(RoundedRectangle(cornerRadius: HLRadius.card))
         }
         .disabled(isSaving)
         .padding(.top, 8)

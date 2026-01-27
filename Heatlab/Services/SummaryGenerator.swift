@@ -78,7 +78,7 @@ final class SummaryGenerator {
             temperatureInfo = "Room Temperature: Not heated"
         }
         
-        let sessionType = WorkoutSession.roomTemperature == nil ? "yoga session" : "heated yoga session"
+        let sessionType = WorkoutSession.roomTemperature == nil ? "session" : "heated session"
         
         return """
         Generate a brief, friendly 2-3 sentence summary of this \(sessionType).

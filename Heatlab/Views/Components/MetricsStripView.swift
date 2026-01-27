@@ -76,8 +76,8 @@ struct MetricsStripView: View {
         }
         .padding(.horizontal, HeatLabSpacing.sm)
         .padding(.vertical, HeatLabSpacing.xs)
-        .background(Color(.systemGray6))
-        .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.sm))
+        .background(Color.hlSurface)
+        .clipShape(RoundedRectangle(cornerRadius: HLRadius.card))
     }
     
     private func metricItem(label: String, value: String) -> some View {

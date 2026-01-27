@@ -19,7 +19,7 @@ enum TemperatureUnit: String, CaseIterable, Codable {
         }
     }
     
-    /// Range for hot yoga temperature input
+    /// Range for heated session temperature input
     var inputRange: ClosedRange<Int> {
         switch self {
         case .fahrenheit: return 80...115
@@ -27,7 +27,7 @@ enum TemperatureUnit: String, CaseIterable, Codable {
         }
     }
     
-    /// Default hot yoga temperature
+    /// Default heated session temperature
     var defaultTemperature: Int {
         switch self {
         case .fahrenheit: return 95

@@ -19,6 +19,11 @@ struct SummaryCard: View {
     let isGeneratingInsight: Bool
     let onUpgradeTap: () -> Void
     
+    /// Apple Intelligence availability status
+    private var aiStatus: AppleIntelligenceStatus {
+        AnalysisInsightGenerator.availabilityStatus
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Text Section
@@ -39,8 +44,8 @@ struct SummaryCard: View {
                     .padding(.bottom)
             }
         }
-        .background(Color(.systemGray6))
-        .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.lg))
+        .background(Color.hlSurface)
+        .clipShape(RoundedRectangle(cornerRadius: HLRadius.card))
     }
     
     // MARK: - Text Section
@@ -63,7 +68,7 @@ struct SummaryCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
                     Image(systemName: SFSymbol.sparkles)
-                        .foregroundStyle(Color.HeatLab.coral)
+                        .foregroundStyle(Color.hlAccent)
                     Text("Insight")
                         .font(.subheadline.bold())
                         .foregroundStyle(.secondary)
@@ -78,7 +83,7 @@ struct SummaryCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Image(systemName: SFSymbol.sparkles)
-                        .foregroundStyle(Color.HeatLab.coral)
+                        .foregroundStyle(Color.hlAccent)
                     Text("Insight")
                         .font(.subheadline.bold())
                         .foregroundStyle(.secondary)
@@ -118,10 +123,17 @@ struct SummaryCard: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Unlock AI insights")
                             .font(.subheadline.bold())
-                            .foregroundStyle(Color.HeatLab.coral)
+                            .foregroundStyle(Color.hlAccent)
                         Text("Personalized takeaways from your sessions")
                             .font(.caption)
                             .foregroundStyle(.tertiary)
+                        
+                        // Show hint if AI not available (with specific reason)
+                        if let hint = aiStatus.unavailableHint {
+                            Text(hint)
+                                .font(.caption2)
+                                .foregroundStyle(.quaternary)
+                        }
                     }
                     
                     Spacer()

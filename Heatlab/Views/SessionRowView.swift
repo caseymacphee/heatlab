@@ -15,12 +15,22 @@ struct SessionRowView: View {
         settings.sessionTypeName(for: session.session.sessionTypeId) ?? "Session"
     }
     
+    private var sessionIcon: String {
+        settings.sessionType(for: session.session.sessionTypeId)?.icon ?? SFSymbol.yoga
+    }
+    
     private var timeString: String {
         formatSessionDate(session.session.startDate)
     }
     
     var body: some View {
         HStack(spacing: 12) {
+            // Workout type icon
+            Image(systemName: sessionIcon)
+                .font(.title3)
+                .foregroundStyle(Color.hlAccent)
+                .frame(width: 28)
+            
             VStack(alignment: .leading, spacing: 4) {
                 // Primary: Class name
                 Text(className)
@@ -98,7 +108,7 @@ struct SessionRowView: View {
         SessionRowView(session: SessionWithStats(
             session: {
                 let s = WorkoutSession(workoutUUID: UUID(), startDate: Date(), roomTemperature: 102)
-                s.sessionTypeId = SessionTypeConfig.DefaultTypeID.heatedVinyasa
+                s.sessionTypeId = SessionTypeConfig.DefaultTypeID.vinyasa
                 return s
             }(),
             workout: nil,
@@ -107,7 +117,7 @@ struct SessionRowView: View {
         SessionRowView(session: SessionWithStats(
             session: {
                 let s = WorkoutSession(workoutUUID: UUID(), startDate: Date(), roomTemperature: nil)
-                s.sessionTypeId = SessionTypeConfig.DefaultTypeID.heatedVinyasa
+                s.sessionTypeId = SessionTypeConfig.DefaultTypeID.vinyasa
                 return s
             }(),
             workout: nil,

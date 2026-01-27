@@ -2,7 +2,7 @@
 //  SessionStats.swift
 //  heatlab
 //
-//  Computed statistics for a yoga session
+//  Computed statistics for a workout session
 //
 
 import Foundation

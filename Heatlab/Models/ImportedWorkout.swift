@@ -18,7 +18,7 @@ final class ImportedWorkout {
     /// Optional for CloudKit compatibility, but always set via init
     var workoutUUID: UUID?
     
-    /// Whether the user has dismissed this workout (doesn't want to import it)
+    /// Whether the user has dismissed this workout (doesn't want to claim it)
     var isDismissed: Bool = false
     
     // Timestamps

@@ -69,7 +69,7 @@ struct FilterPillRow: View {
                             .font(.caption.bold())
                             .foregroundStyle(.secondary)
                             .padding(8)
-                            .background(Color(.systemGray5))
+                            .background(Color.hlSurface2)
                             .clipShape(Circle())
                     }
                 }
@@ -101,8 +101,8 @@ struct FilterPill: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(isActive ? Color.HeatLab.coral.opacity(0.15) : Color(.systemGray6))
-        .foregroundStyle(isActive ? Color.HeatLab.coral : .primary)
+        .background(isActive ? Color.hlAccent.opacity(0.15) : Color.hlSurface2)
+        .foregroundStyle(isActive ? Color.hlAccent : .primary)
         .clipShape(Capsule())
     }
 }

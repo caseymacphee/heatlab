@@ -2,7 +2,7 @@
 //  heatlabApp.swift
 //  heatlab
 //
-//  Heat Lab - Hot Yoga Tracking App
+//  Heat Lab - Heat Training Tracking App
 //  iOS is read-only: pulls synced data from CloudKit, never writes to Watch-owned records
 //  Also receives fast-lane sync via WatchConnectivity when Watch is reachable
 //

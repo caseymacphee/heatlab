@@ -1,6 +1,6 @@
 # Heat Lab - System Summary
 
-Hot yoga tracking app for iOS and watchOS that helps users track their sessions, monitor heart rate adaptation, and understand their acclimation to different temperature environments.
+Heat training tracking app for iOS and watchOS that helps users track their sessions, monitor heart rate adaptation, and understand their acclimation to different temperature environments.
 
 ## High-Level Architecture
 
@@ -52,7 +52,7 @@ Hot yoga tracking app for iOS and watchOS that helps users track their sessions,
 ## Core Domain Models
 
 ### WorkoutSession (`Shared/Models/WorkoutSession.swift`)
-The central entity representing a yoga session:
+The central entity representing a workout session:
 - Links to HealthKit workout via `workoutUUID`
 - Tracks heated state (`isHeated`) and room temperature
 - Supports perceived effort ratings and user notes
@@ -110,8 +110,8 @@ Unified data access layer:
 - Returns `SessionWithStats` for UI consumption
 
 #### HealthKitImporter (`Heatlab/Services/HealthKitImporter.swift`)
-Imports yoga workouts from Apple Health:
-- Fetches yoga workouts from past 7 days
+Imports workouts from Apple Health:
+- Fetches workouts from past 7 days
 - Filters out already-claimed and dismissed workouts
 - Supports dismiss/restore workflow for unwanted workouts
 
@@ -177,7 +177,7 @@ Multi-dimensional analysis with period comparisons:
 ## Data Flow: Claiming a Workout (iOS)
 
 ```
-1. [iPhone] HealthKitImporter fetches yoga workouts from Health
+1. [iPhone] HealthKitImporter fetches workouts from Health
 2. [iPhone] Filter: exclude claimed (workoutUUID exists) and dismissed
 3. [iPhone] User selects workout, enters metadata
 4. [iPhone] claimWorkout() creates WorkoutSession

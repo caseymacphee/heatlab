@@ -109,16 +109,28 @@ final class UserSettings {
         sessionTypeConfigs.filter { !$0.isDeleted }
     }
     
+    /// Unique workout types from all visible session types
+    /// Used by HealthKitImporter to filter claim portal
+    var enabledWorkoutTypes: Set<String> {
+        Set(visibleSessionTypes.map { $0.hkActivityTypeRaw })
+    }
+    
     /// Get the display name for a session type ID
     func sessionTypeName(for id: UUID?) -> String? {
         guard let id else { return nil }
         return sessionTypeConfigs.first { $0.id == id }?.name
     }
     
-    /// Add a new custom session type
-    func addCustomType(name: String) {
+    /// Get the session type config for a given ID
+    func sessionType(for id: UUID?) -> SessionTypeConfig? {
+        guard let id else { return nil }
+        return sessionTypeConfigs.first { $0.id == id }
+    }
+    
+    /// Add a new custom session type with specified workout type
+    func addCustomType(name: String, workoutType: String = "yoga") {
         var configs = sessionTypeConfigs
-        configs.append(SessionTypeConfig.custom(name: name))
+        configs.append(SessionTypeConfig.custom(name: name, hkActivityTypeRaw: workoutType))
         sessionTypeConfigs = configs
     }
     

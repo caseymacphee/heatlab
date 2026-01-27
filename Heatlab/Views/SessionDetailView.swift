@@ -44,7 +44,7 @@ struct SessionDetailView: View {
             }
             .padding()
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color.hlBackground)
         .navigationTitle("Session")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -81,13 +81,19 @@ struct SessionDetailView: View {
     @ViewBuilder
     private var viewModeContent: some View {
         VStack(alignment: .leading, spacing: 20) {
-                // Header
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(settings.sessionTypeName(for: session.session.sessionTypeId) ?? "Heated Class")
-                        .font(.title2.bold())
-                    Text(session.session.startDate.formatted(date: .complete, time: .shortened))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                // Header with workout type icon
+                HStack(spacing: 12) {
+                    Image(systemName: settings.sessionType(for: session.session.sessionTypeId)?.icon ?? SFSymbol.yoga)
+                        .font(.title)
+                        .foregroundStyle(Color.hlAccent)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(settings.sessionTypeName(for: session.session.sessionTypeId) ?? "Session")
+                            .font(.title2.bold())
+                        Text(session.session.startDate.formatted(date: .complete, time: .shortened))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 
                 // Stats Grid - Left to right, top to bottom: Duration, Temperature, Avg HR, Calories/HR Range
@@ -150,7 +156,7 @@ struct SessionDetailView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 220)
-                    .background(Color(.systemGray6))
+                    .background(Color.hlSurface)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
                 
@@ -203,7 +209,7 @@ struct SessionDetailView: View {
             
             // Heated Toggle
             Toggle("Heated Session", isOn: $editedIsHeated.animation(.easeInOut(duration: 0.2)))
-                .tint(Color.HeatLab.coral)
+                .tint(Color.hlAccent)
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 16)
@@ -432,7 +438,7 @@ struct SessionDetailView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Image(systemName: SFSymbol.sparkles)
-                        .foregroundStyle(Color.HeatLab.coral)
+                        .foregroundStyle(Color.hlAccent)
                     Text("AI Summary")
                         .font(.headline)
                     Spacer()
@@ -470,8 +476,8 @@ struct SessionDetailView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.HeatLab.coral.opacity(0.1))
-                .foregroundStyle(Color.HeatLab.coral)
+                .background(Color.hlAccent.opacity(0.1))
+                .foregroundStyle(Color.hlAccent)
                 .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.md))
             }
             .disabled(isGeneratingSummary)
@@ -565,8 +571,8 @@ struct SessionDetailView: View {
             session: SessionWithStats(
                 session: {
                     let s = WorkoutSession(workoutUUID: UUID(), startDate: Date(), roomTemperature: 102)
-                    s.sessionTypeId = SessionTypeConfig.DefaultTypeID.heatedVinyasa
-                    s.aiSummary = "Great session! You maintained a strong, consistent effort throughout this heated vinyasa class. Your heart rate stayed in your typical range for 102°F sessions."
+                    s.sessionTypeId = SessionTypeConfig.DefaultTypeID.vinyasa
+                    s.aiSummary = "Great session! You maintained a strong, consistent effort throughout this vinyasa class. Your heart rate stayed in your typical range for 102°F sessions."
                     return s
                 }(),
                 workout: nil,

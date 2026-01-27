@@ -9,29 +9,21 @@ import SwiftUI
 
 // MARK: - Platform Colors
 
-/// Card background color that adapts to platform
+/// Card background color that adapts to platform (uses design system)
 private var cardBackgroundColor: Color {
-    #if os(watchOS)
-    Color.gray.opacity(0.2)
-    #else
-    Color(.systemGray6)
-    #endif
+    Color.hlSurface
 }
 
-/// System background color that adapts to platform
+/// System background color that adapts to platform (uses design system)
 private var systemBackgroundColor: Color {
-    #if os(watchOS)
-    Color.black
-    #else
-    Color(.systemBackground)
-    #endif
+    Color.hlBackground
 }
 
 // MARK: - Card Styles
 
 /// Primary card style for main content cards
 struct HeatLabCardStyle: ViewModifier {
-    var radius: CGFloat = HeatLabRadius.lg
+    var radius: CGFloat = HLRadius.card
 
     func body(content: Content) -> some View {
         content
@@ -47,7 +39,7 @@ struct HeatLabSecondaryCardStyle: ViewModifier {
         content
             .padding(HeatLabSpacing.md)
             .background(cardBackgroundColor)
-            .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.md))
+            .clipShape(RoundedRectangle(cornerRadius: HLRadius.card))
     }
 }
 
@@ -59,25 +51,19 @@ struct HeatLabHintCardStyle: ViewModifier {
         content
             .padding(HeatLabSpacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(color.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.md))
+            .background(color.opacity(0.15))
+            .clipShape(RoundedRectangle(cornerRadius: HLRadius.card))
     }
 }
 
-/// Input field style for edit mode (elevated with subtle shadow)
+/// Input field style for edit mode (elevated, no shadow per design system)
 struct HeatLabInputStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(HeatLabSpacing.md)
             .background(
-                RoundedRectangle(cornerRadius: HeatLabRadius.lg)
-                    .fill(systemBackgroundColor)
-                    .shadow(
-                        color: HeatLabShadow.subtle.color,
-                        radius: HeatLabShadow.subtle.radius,
-                        x: HeatLabShadow.subtle.x,
-                        y: HeatLabShadow.subtle.y
-                    )
+                RoundedRectangle(cornerRadius: HLRadius.input)
+                    .fill(Color.hlSurface)
             )
     }
 }
@@ -85,8 +71,8 @@ struct HeatLabInputStyle: ViewModifier {
 // MARK: - View Extensions
 
 extension View {
-    /// Apply primary card styling (padding, gray background, rounded corners)
-    func heatLabCard(radius: CGFloat = HeatLabRadius.lg) -> some View {
+    /// Apply primary card styling (padding, surface background, 14pt corners)
+    func heatLabCard(radius: CGFloat = HLRadius.card) -> some View {
         modifier(HeatLabCardStyle(radius: radius))
     }
 

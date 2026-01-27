@@ -101,9 +101,9 @@ struct DashboardView: View {
                     ProgressView("Loading...")
                         .padding()
                 } else if let comparison = weekComparison, comparison.current.sessionCount > 0 {
-                    // MARK: - Import Workouts CTA (when claimable workouts exist)
+                    // MARK: - Claim Workouts CTA (when claimable workouts exist)
                     if claimableWorkoutCount > 0 {
-                        ImportWorkoutsCTA(count: claimableWorkoutCount) {
+                        ClaimWorkoutsCTA(count: claimableWorkoutCount) {
                             showingClaimList = true
                         }
                     }
@@ -137,7 +137,7 @@ struct DashboardView: View {
                                         selectedTab = 1
                                     }
                                     .font(.subheadline)
-                                    .foregroundStyle(Color.HeatLab.coral)
+                                    .foregroundStyle(Color.hlAccent)
                                 }
                             }
 
@@ -153,35 +153,36 @@ struct DashboardView: View {
                         .heatLabCard()
                     }
                 } else {
-                    // MARK: - Import Workouts CTA (also shown in empty state)
+                    // MARK: - Claim Workouts CTA (also shown in empty state)
                     if claimableWorkoutCount > 0 {
-                        ImportWorkoutsCTA(count: claimableWorkoutCount) {
+                        ClaimWorkoutsCTA(count: claimableWorkoutCount) {
                             showingClaimList = true
                         }
                     }
                     
                     // Empty state
                     VStack(spacing: 16) {
-                        Image(systemName: SFSymbol.yoga)
-                            .font(.system(size: 50))
-                            .foregroundStyle(.secondary)
+                        Image(systemName: SFSymbol.mindAndBody)
+                            .font(.system(size: 48))
+                            .foregroundStyle(Color.hlMuted)
 
-                        Text("Ready to begin?")
+                        Text("No sessions yet")
                             .font(.title3.bold())
 
-                        Text("Start a session on your Apple Watch to begin tracking.")
+                        Text("Start tracking your practice to see insights here.")
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.hlMuted)
                             .multilineTextAlignment(.center)
                     }
                     .padding(40)
                     .frame(maxWidth: .infinity)
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: HeatLabRadius.lg))
+                    .background(Color.hlSurface)
+                    .clipShape(RoundedRectangle(cornerRadius: HLRadius.card))
                 }
             }
             .padding()
         }
+        .background(Color.hlBackground)
         .navigationTitle("Home")
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -246,7 +247,10 @@ struct DashboardView: View {
         // Check for claimable workouts from Apple Health
         let importer = HealthKitImporter(modelContext: modelContext)
         do {
-            claimableWorkoutCount = try await importer.claimableWorkoutCount(isPro: subscriptionManager.isPro)
+            claimableWorkoutCount = try await importer.claimableWorkoutCount(
+                isPro: subscriptionManager.isPro,
+                enabledTypes: settings.enabledWorkoutTypes
+            )
             print("📊 DashboardView - Claimable workouts: \(claimableWorkoutCount)")
         } catch {
             print("📊 DashboardView - Failed to fetch claimable workouts: \(error)")
@@ -319,43 +323,39 @@ struct DashboardView: View {
 
 }
 
-// MARK: - Import Workouts CTA
+// MARK: - Claim Workouts CTA
 
-struct ImportWorkoutsCTA: View {
+struct ClaimWorkoutsCTA: View {
     let count: Int
     let onTap: () -> Void
-    
+
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
-                Image(systemName: "square.and.arrow.down")
+                Image(systemName: SFSymbol.claimFill)
                     .font(.title2)
-                    .foregroundStyle(Color.HeatLab.coral)
-                
+                    .foregroundStyle(Color.hlAccent)
+
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(count == 1 ? "1 Yoga Workout to Import" : "\(count) Yoga Workouts to Import")
+                    Text(count == 1 ? "1 Workout to Claim" : "\(count) Workouts to Claim")
                         .font(.headline)
-                        .foregroundStyle(.primary)
-                    
+                        .foregroundStyle(Color.hlText)
+
                     Text("From Apple Health")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.hlMuted)
                 }
-                
+
                 Spacer()
-                
+
                 Image(systemName: SFSymbol.chevronRight)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.hlMuted)
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: HeatLabRadius.lg)
-                    .fill(Color.HeatLab.coral.opacity(0.1))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: HeatLabRadius.lg)
-                            .strokeBorder(Color.HeatLab.coral.opacity(0.3), lineWidth: 1)
-                    )
+                RoundedRectangle(cornerRadius: HLRadius.card)
+                    .fill(Color.hlAccent.opacity(0.15))
             )
         }
         .buttonStyle(.plain)
@@ -397,10 +397,10 @@ private struct StatItem: View {
     .environmentObject(WatchConnectivityReceiver.shared)
 }
 
-#Preview("Import CTA") {
+#Preview("Claim CTA") {
     VStack {
-        ImportWorkoutsCTA(count: 3) { }
-        ImportWorkoutsCTA(count: 1) { }
+        ClaimWorkoutsCTA(count: 3) { }
+        ClaimWorkoutsCTA(count: 1) { }
     }
     .padding()
 }
