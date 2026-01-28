@@ -175,6 +175,9 @@ final class WatchConnectivityReceiver: NSObject, ObservableObject {
            let sessionTypeId = UUID(uuidString: sessionTypeIdString) {
             session.sessionTypeId = sessionTypeId
         }
+        if let workoutTypeRaw = data["workoutTypeRaw"] as? String {
+            session.workoutTypeRaw = workoutTypeRaw
+        }
         if let userNotes = data["userNotes"] as? String {
             session.userNotes = userNotes
         }

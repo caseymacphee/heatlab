@@ -62,8 +62,8 @@ struct HistoryView: View {
             result.sort { ($0.session.roomTemperature ?? 0) < ($1.session.roomTemperature ?? 0) }
         case .classType:
             result.sort {
-                let name0 = userSettings.sessionTypeName(for: $0.session.sessionTypeId) ?? ""
-                let name1 = userSettings.sessionTypeName(for: $1.session.sessionTypeId) ?? ""
+                let name0 = userSettings.sessionTypeName(for: $0.session.sessionTypeId) ?? $0.session.workoutTypeDisplayName
+                let name1 = userSettings.sessionTypeName(for: $1.session.sessionTypeId) ?? $1.session.workoutTypeDisplayName
                 return name0 < name1
             }
         }

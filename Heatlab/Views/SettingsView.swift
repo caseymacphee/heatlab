@@ -120,7 +120,7 @@ struct SettingsView: View {
             } header: {
                 Text("Temperature")
             } footer: {
-                Text("Choose how temperatures are displayed throughout the app. Sessions are always stored in Fahrenheit internally.")
+                Text("Choose how temperatures are displayed throughout the app.")
             }
             
             // Display Preferences Section
@@ -130,7 +130,7 @@ struct SettingsView: View {
             } header: {
                 Text("Display Preferences")
             } footer: {
-                Text("Some practitioners prefer to focus on the meditative aspects of their practice rather than exercise metrics.")
+                Text("Some practitioners prefer to opt out of this exercise metrics.")
             }
             
             // Session Types Section

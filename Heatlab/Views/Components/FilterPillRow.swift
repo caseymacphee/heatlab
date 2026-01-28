@@ -26,13 +26,13 @@ struct FilterPillRow: View {
                     }
                     Divider()
                     ForEach(TemperatureBucket.allCases, id: \.self) { bucket in
-                        Button(bucket.displayName) {
+                        Button(bucket.displayName(for: settings.temperatureUnit)) {
                             selectedTemperatureBucket = bucket
                         }
                     }
                 } label: {
                     FilterPill(
-                        title: selectedTemperatureBucket?.displayName ?? "Temperature",
+                        title: selectedTemperatureBucket?.displayName(for: settings.temperatureUnit) ?? "Temperature",
                         isActive: selectedTemperatureBucket != nil,
                         icon: selectedTemperatureBucket == .unheated ? "thermometer.low" : SFSymbol.thermometer
                     )

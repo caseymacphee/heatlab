@@ -100,8 +100,8 @@ struct ClaimDetailView: View {
             hapticGenerator = UIImpactFeedbackGenerator(style: .light)
             hapticGenerator?.prepare()
             
-            // Set default session type if available
-            if let defaultType = settings.visibleSessionTypes.first {
+            // Set default session type from matching types (same workout type)
+            if let defaultType = matchingSessionTypes.first {
                 sessionTypeId = defaultType.id
             }
         }
@@ -224,34 +224,35 @@ struct ClaimDetailView: View {
         }
     }
     
+    /// Session types that match the workout's activity type (yoga, pilates, barre)
+    private var matchingSessionTypes: [SessionTypeConfig] {
+        settings.manageableSessionTypes.filter { $0.hkActivityTypeRaw == workout.workoutTypeRaw }
+    }
+    
     @ViewBuilder
     private var sessionTypeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Session Type")
                 .font(.headline)
-            Menu {
-                Button("None") {
-                    sessionTypeId = nil
-                }
-                ForEach(settings.manageableSessionTypes) { type in
-                    Button(type.name) {
-                        sessionTypeId = type.id
-                    }
-                }
-            } label: {
+
+            if matchingSessionTypes.count == 1, let onlyType = matchingSessionTypes.first {
+                // Single matching type - show as locked selection (no picker needed)
                 HStack {
-                    Text(settings.sessionTypeName(for: sessionTypeId) ?? "None")
+                    Text(onlyType.name)
                         .foregroundStyle(.primary)
                     Spacer()
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 16)
                         .fill(Color(.systemBackground))
                         .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                )
+            } else {
+                // Multiple matching types - show pill grid (tap to select, tap again to deselect)
+                SessionTypePillGrid(
+                    sessionTypes: matchingSessionTypes,
+                    selectedTypeId: $sessionTypeId
                 )
             }
         }

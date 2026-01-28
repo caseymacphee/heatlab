@@ -66,6 +66,7 @@ struct ContentView: View {
             .tag(3)
         }
         .tint(.accentColor)
+        .background(Color.hlBackground.ignoresSafeArea())
         .onChange(of: selectedTab) { oldValue, newValue in
             // Reset navigation when switching to a tab
             // This ensures we always pop to root when switching tabs

@@ -63,6 +63,7 @@ final class WorkoutSession {
     var endDate: Date?
     var roomTemperature: Int?  // Degrees Fahrenheit (e.g., 95, 105) - nil means unheated
     var sessionTypeId: UUID?  // References SessionTypeConfig.id
+    var workoutTypeRaw: String = "yoga"  // HealthKit workout type: "yoga", "pilates", "barre"
     var userNotes: String?
     var aiSummary: String?
     var manualDurationOverride: TimeInterval?  // Manual duration override (overrides HealthKit workout duration)
@@ -85,6 +86,16 @@ final class WorkoutSession {
     var perceivedEffort: PerceivedEffort {
         get { PerceivedEffort(rawValue: perceivedEffortRaw) ?? .none }
         set { perceivedEffortRaw = newValue.rawValue }
+    }
+    
+    /// Display name for the workout type (Yoga, Pilates, Barre)
+    var workoutTypeDisplayName: String {
+        switch workoutTypeRaw {
+        case "yoga": return "Yoga"
+        case "pilates": return "Pilates"
+        case "barre": return "Barre"
+        default: return "Yoga"  // Fallback
+        }
     }
     
     /// Whether this session needs to be synced to CloudKit
@@ -133,12 +144,12 @@ final class WorkoutSession {
 /// Temperature buckets for baseline grouping
 /// Includes temperature ranges for heated sessions and a separate bucket for unheated
 enum TemperatureBucket: String, Codable, CaseIterable {
-    case unheated = "Unheated"    // roomTemperature == nil
-    case warm = "80-89°F"         // < 90
-    case hot = "90-99°F"          // 90-99
-    case veryHot = "100-104°F"    // 100-104
-    case extreme = "105°F+"       // 105+
-    
+    case unheated
+    case warm      // 80-89°F / 27-31°C
+    case hot       // 90-99°F / 32-37°C
+    case veryHot   // 100-104°F / 38-40°C
+    case extreme   // 105°F+ / 41°C+
+
     static func from(temperature: Int) -> TemperatureBucket {
         switch temperature {
         case ..<90: return .warm
@@ -147,14 +158,28 @@ enum TemperatureBucket: String, Codable, CaseIterable {
         default: return .extreme
         }
     }
-    
-    var displayName: String { rawValue }
-    
+
+    /// Display name showing the temperature range in the user's preferred unit
+    func displayName(for unit: TemperatureUnit) -> String {
+        switch self {
+        case .unheated:
+            return "Unheated"
+        case .warm:
+            return unit == .fahrenheit ? "80-89°F" : "27-31°C"
+        case .hot:
+            return unit == .fahrenheit ? "90-99°F" : "32-37°C"
+        case .veryHot:
+            return unit == .fahrenheit ? "100-104°F" : "38-40°C"
+        case .extreme:
+            return unit == .fahrenheit ? "105°F+" : "41°C+"
+        }
+    }
+
     /// Whether this is a heated temperature bucket
     var isHeated: Bool {
         self != .unheated
     }
-    
+
     /// Returns only the heated buckets (for UI filtering when you only want temperature options)
     static var heatedCases: [TemperatureBucket] {
         allCases.filter { $0.isHeated }

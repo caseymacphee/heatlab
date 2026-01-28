@@ -63,7 +63,7 @@ struct SessionTypeConfig: Codable, Identifiable, Equatable {
         static let vinyasa  = UUID(uuidString: "A1B2C3D4-1111-1111-1111-000000000001")!
         static let pilates  = UUID(uuidString: "A1B2C3D4-1111-1111-1111-000000000005")!
         static let sculpt   = UUID(uuidString: "A1B2C3D4-1111-1111-1111-000000000003")!
-        static let hotHour  = UUID(uuidString: "A1B2C3D4-1111-1111-1111-000000000004")!
+        static let bikram   = UUID(uuidString: "A1B2C3D4-1111-1111-1111-000000000004")!
         static let barre    = UUID(uuidString: "A1B2C3D4-1111-1111-1111-000000000006")!
     }
     
@@ -94,8 +94,8 @@ struct SessionTypeConfig: Codable, Identifiable, Equatable {
             hkActivityTypeRaw: "yoga"
         ),
         SessionTypeConfig(
-            id: DefaultTypeID.hotHour,
-            name: "Hot Hour",
+            id: DefaultTypeID.bikram,
+            name: "Bikram",
             isDefault: true,
             isVisible: true,
             isDeleted: false,

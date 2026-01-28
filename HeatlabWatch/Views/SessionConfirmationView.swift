@@ -180,6 +180,11 @@ struct SessionConfirmationView: View {
         session.endDate = workout.endDate
         session.sessionTypeId = selectedSessionTypeId  // Pre-selected in StartView
         session.perceivedEffort = selectedEffort
+        // Set workout type from session type config (or fallback to yoga)
+        if let sessionTypeId = selectedSessionTypeId,
+           let sessionType = settings.sessionType(for: sessionTypeId) {
+            session.workoutTypeRaw = sessionType.hkActivityTypeRaw
+        }
         // syncState is .pending by default - ready for background sync
         
         modelContext.insert(session)

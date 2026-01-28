@@ -211,6 +211,8 @@ final class WatchConnectivityRelay: NSObject, ObservableObject {
         if let sessionTypeId = session.sessionTypeId {
             dict["sessionTypeId"] = sessionTypeId.uuidString
         }
+        // Always include workout type (defaults to "yoga" in model)
+        dict["workoutTypeRaw"] = session.workoutTypeRaw
         if let userNotes = session.userNotes {
             dict["userNotes"] = userNotes
         }

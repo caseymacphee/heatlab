@@ -57,7 +57,7 @@ extension Color {
 
         // Semantic Stat Colors (use for icons/accents)
         static let heartRate = Color.red
-        static let duration = Color.blue
+        static let duration = Color.hlAccent
         static let calories = Color.orange
         static let sessions = Color.purple
 

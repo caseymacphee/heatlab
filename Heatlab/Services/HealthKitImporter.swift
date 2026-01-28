@@ -46,6 +46,16 @@ struct ClaimableWorkout: Identifiable, Hashable {
         }
     }
     
+    /// Raw workout type string for matching with SessionTypeConfig.hkActivityTypeRaw
+    var workoutTypeRaw: String {
+        switch workout.workoutActivityType {
+        case .yoga: return "yoga"
+        case .pilates: return "pilates"
+        case .barre: return "barre"
+        default: return "yoga"  // Fallback
+        }
+    }
+    
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
@@ -226,6 +236,15 @@ final class HealthKitImporter {
         perceivedEffort: PerceivedEffort,
         notes: String?
     ) throws -> WorkoutSession {
+        // Determine workout type from HKWorkout
+        let workoutTypeRaw: String
+        switch workout.workoutActivityType {
+        case .yoga: workoutTypeRaw = "yoga"
+        case .pilates: workoutTypeRaw = "pilates"
+        case .barre: workoutTypeRaw = "barre"
+        default: workoutTypeRaw = "yoga"  // Fallback
+        }
+        
         // Create the WorkoutSession
         let session = WorkoutSession(
             workoutUUID: workout.uuid,
@@ -234,6 +253,7 @@ final class HealthKitImporter {
         )
         session.endDate = workout.endDate
         session.sessionTypeId = sessionTypeId
+        session.workoutTypeRaw = workoutTypeRaw
         session.perceivedEffort = perceivedEffort
         session.userNotes = notes
         

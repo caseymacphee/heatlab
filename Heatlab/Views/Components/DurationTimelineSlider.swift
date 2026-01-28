@@ -31,7 +31,7 @@ struct DurationTimelineSlider: View {
                 Text(formatDuration(selectedDuration))
                     .font(.system(.title2, design: .rounded, weight: .semibold))
                     .monospacedDigit()
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(Color.hlAccent)
             }
 
             // Timeline bar
@@ -52,7 +52,7 @@ struct DurationTimelineSlider: View {
                     RoundedRectangle(cornerRadius: sliderHeight / 2)
                         .fill(
                             LinearGradient(
-                                colors: [Color.blue.opacity(0.8), Color.blue],
+                                colors: [Color.hlAccent.opacity(0.8), Color.hlAccent],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )

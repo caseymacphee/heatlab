@@ -39,23 +39,13 @@ struct StartView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                // Logo and tagline
-                Image("HeatLabWaveOnly")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 80, height: 80)
-                    .foregroundStyle(.white)
-
-                Text("Track your Practice")
-                    .font(.caption2)
-                    .foregroundStyle(Color.hlMuted)
-                
                 // Session type picker (if there are visible types)
                 if !visibleTypes.isEmpty {
-                    Text("Session Type")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 4)
+                    HStack(spacing: 6) {
+                        Text("Session Type")
+                            .font(.headline)
+                            .foregroundStyle(Color.hlMuted)  
+                    }
                     
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
                         ForEach(visibleTypes) { typeConfig in
@@ -69,6 +59,10 @@ struct StartView: View {
                             )
                         }
                     }
+
+                    Text("Edit session types in iPhone Settings")
+                        .font(.caption2)
+                        .foregroundStyle(Color.hlMuted.opacity(0.7))
                 }
                 
                 // Start button

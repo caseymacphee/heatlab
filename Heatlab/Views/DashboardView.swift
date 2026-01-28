@@ -22,6 +22,7 @@ struct DashboardView: View {
     @State private var analysisResult: AnalysisResult?
     @State private var claimableWorkoutCount: Int = 0
     @State private var showingClaimList = false
+    @State private var showingWatchInstructions = false
 
     private let analysisCalculator = AnalysisCalculator()
 
@@ -94,93 +95,88 @@ struct DashboardView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-
-                if isLoading {
+        Group {
+            if isLoading {
+                VStack {
+                    Spacer()
                     ProgressView("Loading...")
-                        .padding()
-                } else if let comparison = weekComparison, comparison.current.sessionCount > 0 {
-                    // MARK: - Claim Workouts CTA (when claimable workouts exist)
-                    if claimableWorkoutCount > 0 {
-                        ClaimWorkoutsCTA(count: claimableWorkoutCount) {
-                            showingClaimList = true
+                    Spacer()
+                }
+            } else if let comparison = weekComparison, comparison.current.sessionCount > 0 {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // MARK: - Claim Workouts CTA (when claimable workouts exist)
+                        if claimableWorkoutCount > 0 {
+                            ClaimWorkoutsCTA(count: claimableWorkoutCount) {
+                                showingClaimList = true
+                            }
                         }
-                    }
-                    
-                    // MARK: - Insight Preview (taps to Analysis tab)
-                    InsightPreviewCard(
-                        result: analysisResult,
-                        isPro: subscriptionManager.isPro,
-                        aiInsight: nil,  // AI insights generated on Analysis view
-                        onTap: { selectedTab = 2 }
-                    )
+                        
+                        // MARK: - Insight Preview (taps to Analysis tab)
+                        InsightPreviewCard(
+                            result: analysisResult,
+                            allSessions: sessions,
+                            isPro: subscriptionManager.isPro,
+                            onTap: { selectedTab = 1 }
+                        )
 
-                    // MARK: - Past 7 Days Stats
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Past 7 Days")
-                            .font(.headline)
-
-                        StatsGrid(comparison: comparison, trendPoints: analysisResult?.trendPoints ?? [])
-                    }
-                    .heatLabCard()
-
-                    // MARK: - Recent Sessions (limited to 3 + "See All")
-                    if !recentSessions.isEmpty {
+                        // MARK: - Past 7 Days Stats
                         VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Text("Recent Sessions")
-                                    .font(.headline)
-                                Spacer()
-                                if recentSessions.count > 3 {
-                                    Button("See All") {
-                                        selectedTab = 1
-                                    }
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.hlAccent)
-                                }
-                            }
+                            Text("Past 7 Days")
+                                .font(.headline)
 
-                            VStack(spacing: 8) {
-                                ForEach(recentSessions.prefix(3)) { session in
-                                    NavigationLink(value: session) {
-                                        SessionRowView(session: session)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
+                            StatsGrid(comparison: comparison, trendPoints: analysisResult?.trendPoints ?? [])
                         }
                         .heatLabCard()
-                    }
-                } else {
-                    // MARK: - Claim Workouts CTA (also shown in empty state)
-                    if claimableWorkoutCount > 0 {
-                        ClaimWorkoutsCTA(count: claimableWorkoutCount) {
-                            showingClaimList = true
+
+                        // MARK: - Recent Sessions (limited to 3 + "See All")
+                        if !recentSessions.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack {
+                                    Text("Recent Sessions")
+                                        .font(.headline)
+                                    Spacer()
+                                    if recentSessions.count > 3 {
+                                        Button("See All") {
+                                            selectedTab = 1
+                                        }
+                                        .font(.subheadline)
+                                        .foregroundStyle(Color.hlAccent)
+                                    }
+                                }
+
+                                VStack(spacing: 8) {
+                                    ForEach(recentSessions.prefix(3)) { session in
+                                        NavigationLink(value: session) {
+                                            SessionRowView(session: session)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                            }
+                            .heatLabCard()
                         }
                     }
-                    
-                    // Empty state
-                    VStack(spacing: 16) {
-                        Image(systemName: SFSymbol.mindAndBody)
-                            .font(.system(size: 48))
-                            .foregroundStyle(Color.hlMuted)
-
-                        Text("No sessions yet")
-                            .font(.title3.bold())
-
-                        Text("Start tracking your practice to see insights here.")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.hlMuted)
-                            .multilineTextAlignment(.center)
+                    .padding()
+                }
+            } else {
+                // MARK: - Empty State (onboarding + skeleton previews)
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Onboarding card (integrates claim CTA)
+                        GettingStartedCard(
+                            claimableCount: claimableWorkoutCount,
+                            onStartWatch: { showingWatchInstructions = true },
+                            onClaimWorkouts: { showingClaimList = true }
+                        )
+                        
+                        // Skeleton previews show what dashboard will look like
+                        DashboardPreviewSection()
                     }
-                    .padding(40)
-                    .frame(maxWidth: .infinity)
-                    .background(Color.hlSurface)
-                    .clipShape(RoundedRectangle(cornerRadius: HLRadius.card))
+                    .padding()
+                    .padding(.bottom, 20)  // Clear tab bar
                 }
             }
-            .padding()
         }
         .background(Color.hlBackground)
         .navigationTitle("Home")
@@ -204,6 +200,9 @@ struct DashboardView: View {
         }
         .navigationDestination(isPresented: $showingClaimList) {
             ClaimListView()
+        }
+        .sheet(isPresented: $showingWatchInstructions) {
+            WatchInstructionsSheet()
         }
         .onChange(of: navigationPath.count) { oldCount, newCount in
             // Reset showingClaimList when navigation path is cleared (e.g., when switching tabs)

@@ -34,6 +34,7 @@
 		3C769D022F1F000100309D3D /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C769D002F1F000100309D3D /* SubscriptionManager.swift */; };
 		3C769D052F1F000200309D3D /* SubscriptionStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C769D042F1F000200309D3D /* SubscriptionStatus.swift */; };
 		3C769D062F1F000200309D3D /* SubscriptionStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C769D042F1F000200309D3D /* SubscriptionStatus.swift */; };
+		3C769E012F2800A100309D3D /* SessionTypeBaseline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C769E002F2800A100309D3D /* SessionTypeBaseline.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -108,6 +109,7 @@
 		3C769C022F1F000000309D3D /* HeatLabStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatLabStyles.swift; sourceTree = "<group>"; };
 		3C769D002F1F000100309D3D /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		3C769D042F1F000200309D3D /* SubscriptionStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionStatus.swift; sourceTree = "<group>"; };
+		3C769E002F2800A100309D3D /* SessionTypeBaseline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTypeBaseline.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -246,6 +248,7 @@
 				3C766B052F1520F400309D3D /* WorkoutSession.swift */,
 				3C766B062F1520F400309D3D /* SessionStats.swift */,
 				3C766B072F1520F400309D3D /* UserBaseline.swift */,
+				3C769E002F2800A100309D3D /* SessionTypeBaseline.swift */,
 				3C769D042F1F000200309D3D /* SubscriptionStatus.swift */,
 			);
 			path = Models;
@@ -538,6 +541,7 @@
 				3C766B0D2F1520F400309D3D /* WorkoutSession.swift in Sources */,
 				3C766B0E2F1520F400309D3D /* UserSettings.swift in Sources */,
 				3C766B0F2F1520F400309D3D /* UserBaseline.swift in Sources */,
+				3C769E012F2800A100309D3D /* SessionTypeBaseline.swift in Sources */,
 				3C766B102F1520F400309D3D /* SessionStats.swift in Sources */,
 				3C769D052F1F000200309D3D /* SubscriptionStatus.swift in Sources */,
 				3C766B112F1520F400309D3D /* Temperature.swift in Sources */,
@@ -642,7 +646,6 @@
 				INFOPLIST_FILE = heatlab/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -681,7 +684,6 @@
 				INFOPLIST_FILE = heatlab/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (

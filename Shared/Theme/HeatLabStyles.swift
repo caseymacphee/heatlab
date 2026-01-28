@@ -51,7 +51,7 @@ struct HeatLabHintCardStyle: ViewModifier {
         content
             .padding(HeatLabSpacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(color.opacity(0.15))
+            .background(color.opacity(0.12))
             .clipShape(RoundedRectangle(cornerRadius: HLRadius.card))
     }
 }

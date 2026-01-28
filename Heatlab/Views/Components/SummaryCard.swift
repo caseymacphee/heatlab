@@ -3,8 +3,9 @@
 //  heatlab
 //
 //  Unified summary card following Weather app pattern:
-//  - Pro: AI interpretation with sparkle icon (or factual while loading)
-//  - Free: Factual summary + upsell teaser
+//  - Pro + AI: Category-based AI insights, generated on-demand as user cycles
+//  - Pro without AI: Deterministic insights with cycling
+//  - Free: Deterministic insights with cycling + upsell teaser
 //  - Both: Metrics row below divider
 //
 
@@ -12,31 +13,47 @@ import SwiftUI
 
 struct SummaryCard: View {
     @Environment(UserSettings.self) var settings
-    
+
     let result: AnalysisResult
+    let allSessions: [SessionWithStats]
     let isPro: Bool
-    let aiInsight: String?
-    let isGeneratingInsight: Bool
     let onUpgradeTap: () -> Void
-    
+
+    // MARK: - Deterministic Insight State
+    @State private var currentInsightIndex = 0
+    @State private var availableInsights: [DeterministicInsight] = []
+
+    // MARK: - AI Insight State
+    @State private var aiInsights: [AIInsightCategory: AIInsight] = [:]  // Cache
+    @State private var applicableCategories: [AIInsightCategory] = []
+    @State private var isLoadingAIInsight = false
+
+    private let deterministicGenerator = DeterministicInsightGenerator()
+    private let aiGenerator = AnalysisInsightGenerator()
+
     /// Apple Intelligence availability status
     private var aiStatus: AppleIntelligenceStatus {
         AnalysisInsightGenerator.availabilityStatus
     }
-    
+
+    /// Whether to use AI insights (Pro + AI available)
+    private var useAIInsights: Bool {
+        isPro && aiStatus.isAvailable
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Text Section
             textSection
                 .padding()
-            
+
             Divider()
                 .padding(.horizontal)
-            
+
             // Metrics Row (always visible)
             metricsRow
                 .padding()
-            
+
             // Trends upsell hint (free users without comparison data)
             if !isPro && result.comparison.previous == nil {
                 trendsUpsellHint
@@ -46,6 +63,155 @@ struct SummaryCard: View {
         }
         .background(Color.hlSurface)
         .clipShape(RoundedRectangle(cornerRadius: HLRadius.card))
+        .onChange(of: result.filters) { _, _ in
+            regenerateInsights()
+            clearAICache()
+        }
+        .onChange(of: result.comparison.current.sessionCount) { _, _ in
+            regenerateInsights()
+            clearAICache()
+        }
+        .onAppear {
+            regenerateInsights()
+            updateApplicableCategories()
+            // Load first AI insight for Pro users
+            if useAIInsights && !applicableCategories.isEmpty {
+                loadCurrentAIInsight()
+            }
+        }
+    }
+
+    // MARK: - Deterministic Insight Helpers
+
+    private var currentInsight: DeterministicInsight? {
+        guard !availableInsights.isEmpty else { return nil }
+        let safeIndex = currentInsightIndex % availableInsights.count
+        return availableInsights[safeIndex]
+    }
+
+    private func cycleInsight() {
+        if useAIInsights {
+            cycleAIInsight()
+        } else {
+            cycleDeterministicInsight()
+        }
+    }
+
+    private func cycleDeterministicInsight() {
+        guard availableInsights.count > 1 else { return }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            currentInsightIndex = (currentInsightIndex + 1) % availableInsights.count
+        }
+    }
+
+    private func regenerateInsights() {
+        availableInsights = deterministicGenerator.generateInsights(
+            from: result,
+            allSessions: allSessions,
+            sessionTypes: settings.manageableSessionTypes,
+            temperatureUnit: settings.temperatureUnit
+        )
+
+        // Reset index if out of bounds
+        if currentInsightIndex >= availableInsights.count {
+            currentInsightIndex = 0
+        }
+
+        updateApplicableCategories()
+    }
+
+    // MARK: - AI Insight Helpers
+
+    /// Current AI insight for Pro users
+    private var currentAIInsight: AIInsight? {
+        guard !applicableCategories.isEmpty else { return nil }
+        let safeIndex = currentInsightIndex % applicableCategories.count
+        let category = applicableCategories[safeIndex]
+        return aiInsights[category]
+    }
+
+    /// Update the list of applicable AI categories based on available deterministic insights
+    private func updateApplicableCategories() {
+        // Map deterministic categories to AI categories
+        applicableCategories = availableInsights.compactMap { insight -> AIInsightCategory? in
+            switch insight.category {
+            case .recentComparison: return .recentComparison
+            case .temperatureAnalysis: return .temperatureAnalysis
+            case .sessionTypeComparison: return .sessionTypeComparison
+            case .periodOverPeriod: return .periodOverPeriod
+            case .progression: return .progression
+            case .acclimation: return .acclimation
+            // These don't have AI equivalents
+            case .peakSession, .hrConsistency, .volume: return nil
+            }
+        }
+    }
+
+    /// Clear cached AI insights (called on filter/data changes)
+    private func clearAICache() {
+        aiInsights.removeAll()
+        if currentInsightIndex >= max(applicableCategories.count, 1) {
+            currentInsightIndex = 0
+        }
+        // Reload first AI insight if using AI
+        if useAIInsights && !applicableCategories.isEmpty {
+            loadCurrentAIInsight()
+        }
+    }
+
+    /// Cycle to next AI insight category
+    private func cycleAIInsight() {
+        guard applicableCategories.count > 1 else { return }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            currentInsightIndex = (currentInsightIndex + 1) % applicableCategories.count
+        }
+        // Load the next insight if not cached
+        loadCurrentAIInsight()
+    }
+
+    /// Load AI insight for current category if not cached
+    private func loadCurrentAIInsight() {
+        guard !applicableCategories.isEmpty else { return }
+        let safeIndex = currentInsightIndex % applicableCategories.count
+        let category = applicableCategories[safeIndex]
+
+        // Already cached
+        if aiInsights[category] != nil { return }
+
+        // Start loading
+        isLoadingAIInsight = true
+
+        Task { @MainActor in
+            do {
+                let text = try await aiGenerator.generateCategoryInsight(
+                    category: category,
+                    result: result,
+                    allSessions: allSessions,
+                    sessionTypes: settings.manageableSessionTypes,
+                    temperatureUnit: settings.temperatureUnit
+                )
+                aiInsights[category] = AIInsight(
+                    category: category,
+                    text: text,
+                    isAIGenerated: true
+                )
+            } catch {
+                // Fall back to deterministic insight
+                if let deterministicInsight = availableInsights.first(where: { $0.category == category.deterministicCategory }) {
+                    aiInsights[category] = AIInsight(
+                        category: category,
+                        text: deterministicInsight.text,
+                        isAIGenerated: false
+                    )
+                }
+            }
+            isLoadingAIInsight = false
+        }
+    }
+
+    /// Number of insights available for cycling
+    private var insightCount: Int {
+        useAIInsights ? applicableCategories.count : availableInsights.count
     }
     
     // MARK: - Text Section
@@ -60,90 +226,164 @@ struct SummaryCard: View {
     }
     
     // MARK: - Pro Text Section
-    
+
     @ViewBuilder
     private var proTextSection: some View {
-        if let insight = aiInsight {
-            // AI insight available
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 6) {
+        if useAIInsights {
+            // Pro + AI available: Show category-based AI insights with cycling
+            aiInsightSection
+        } else {
+            // Pro but AI unavailable: Show deterministic insights with cycling
+            deterministicInsightSection
+        }
+    }
+
+    // MARK: - AI Insight Section
+
+    @ViewBuilder
+    private var aiInsightSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                // Icon: sparkles for AI, category icon for deterministic fallback
+                if let aiInsight = currentAIInsight {
+                    Image(systemName: aiInsight.icon)
+                        .foregroundStyle(Color.hlAccent)
+                } else if let insight = currentInsight {
+                    Image(systemName: insight.icon)
+                        .foregroundStyle(Color.hlAccent)
+                } else {
                     Image(systemName: SFSymbol.sparkles)
                         .foregroundStyle(Color.hlAccent)
-                    Text("Insight")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.secondary)
                 }
-                
-                Text(insight)
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-            }
-        } else if isGeneratingInsight {
-            // Generating insight - show factual + spinner
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: SFSymbol.sparkles)
-                        .foregroundStyle(Color.hlAccent)
-                    Text("Insight")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.secondary)
-                    Spacer()
+
+                Text("Insight")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                // Loading indicator
+                if isLoadingAIInsight && currentAIInsight == nil {
                     ProgressView()
                         .scaleEffect(0.8)
                 }
-                
-                Text(factualSummary)
+
+                // Cycle controls when multiple categories available
+                if insightCount > 1 {
+                    Button {
+                        cycleInsight()
+                    } label: {
+                        HStack(spacing: 4) {
+                            // Page dots
+                            ForEach(0..<insightCount, id: \.self) { index in
+                                Circle()
+                                    .fill(index == currentInsightIndex % insightCount ? Color.hlAccent : Color.hlMuted.opacity(0.5))
+                                    .frame(width: 5, height: 5)
+                            }
+                            Image(systemName: SFSymbol.refresh)
+                                .font(.caption)
+                        }
+                        .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            // Insight text
+            if let aiInsight = currentAIInsight {
+                Text(aiInsight.text)
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                    .id("ai-\(currentInsightIndex)")  // Force view update on cycle
+            } else {
+                // Show deterministic while loading
+                Text(currentInsight?.text ?? factualSummary)
                     .font(.subheadline)
                     .foregroundStyle(.primary)
             }
-        } else {
-            // AI unavailable or insufficient data - show factual only
-            Text(factualSummary)
-                .font(.subheadline)
-                .foregroundStyle(.primary)
         }
     }
     
     // MARK: - Free Text Section
-    
+
     private var freeTextSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Factual summary
-            Text(factualSummary)
-                .font(.subheadline)
-                .foregroundStyle(.primary)
-            
-            // Upsell teaser
-            Button(action: onUpgradeTap) {
-                HStack(spacing: 8) {
-                    Image(systemName: "lock.fill")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Unlock AI insights")
-                            .font(.subheadline.bold())
-                            .foregroundStyle(Color.hlAccent)
-                        Text("Personalized takeaways from your sessions")
+            // Deterministic insights with cycling
+            deterministicInsightSection
+
+            // Upsell teaser (only when AI is available on platform)
+            if aiStatus.isAvailable {
+                Button(action: onUpgradeTap) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "lock.fill")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Unlock AI insights")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(Color.hlAccent)
+                            Text("Personalized takeaways from your sessions")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: SFSymbol.chevronRight)
                             .font(.caption)
                             .foregroundStyle(.tertiary)
-                        
-                        // Show hint if AI not available (with specific reason)
-                        if let hint = aiStatus.unavailableHint {
-                            Text(hint)
-                                .font(.caption2)
-                                .foregroundStyle(.quaternary)
-                        }
                     }
-                    
-                    Spacer()
-                    
-                    Image(systemName: SFSymbol.chevronRight)
-                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    // MARK: - Deterministic Insight Section
+
+    @ViewBuilder
+    private var deterministicInsightSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                if let insight = currentInsight {
+                    Image(systemName: insight.icon)
+                        .foregroundStyle(Color.hlAccent)
+                } else {
+                    Image(systemName: SFSymbol.sparkles)
+                        .foregroundStyle(Color.hlAccent)
+                }
+                Text("Insight")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                // Cycle controls when multiple insights available
+                if availableInsights.count > 1 {
+                    Button {
+                        cycleInsight()
+                    } label: {
+                        HStack(spacing: 4) {
+                            // Page dots
+                            ForEach(0..<availableInsights.count, id: \.self) { index in
+                                Circle()
+                                    .fill(index == currentInsightIndex ? Color.hlAccent : Color.hlMuted.opacity(0.5))
+                                    .frame(width: 5, height: 5)
+                            }
+                            Image(systemName: SFSymbol.refresh)
+                                .font(.caption)
+                        }
                         .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            .buttonStyle(.plain)
+
+            Text(currentInsight?.text ?? factualSummary)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .id(currentInsightIndex)  // Force view update on cycle
         }
     }
     
@@ -341,7 +581,7 @@ private struct MetricDeltaIndicator: View {
     }
 }
 
-#Preview("Pro - AI Ready with Comparison") {
+#Preview("Pro - With AI Insights") {
     SummaryCard(
         result: AnalysisResult(
             filters: .default,
@@ -368,55 +608,21 @@ private struct MetricDeltaIndicator: View {
                 )
             ),
             trendPoints: [
-                TrendPoint(date: Date(), value: 60, temperature: 96),
+                TrendPoint(date: Date().addingTimeInterval(-86400), value: 60, temperature: 96),
                 TrendPoint(date: Date(), value: 63, temperature: 96)
             ],
             acclimation: nil,
             sessionMap: [:]
         ),
+        allSessions: [],
         isPro: true,
-        aiInsight: "Your HR was very stable this week (60–63 bpm range), even on hotter classes (90–99°F). Consider staying hydrated on 100°F+ days.",
-        isGeneratingInsight: false,
         onUpgradeTap: {}
     )
     .padding()
     .environment(UserSettings())
 }
 
-#Preview("Pro - Generating") {
-    SummaryCard(
-        result: AnalysisResult(
-            filters: .default,
-            comparison: PeriodComparison(
-                current: PeriodStats(
-                    periodStart: Date(),
-                    periodEnd: Date(),
-                    sessionCount: 6,
-                    totalDuration: 3600 * 2,
-                    totalCalories: 800,
-                    avgHeartRate: 61,
-                    maxHeartRate: 65,
-                    avgTemperature: 96
-                ),
-                previous: nil
-            ),
-            trendPoints: [
-                TrendPoint(date: Date(), value: 60, temperature: 96),
-                TrendPoint(date: Date(), value: 63, temperature: 96)
-            ],
-            acclimation: nil,
-            sessionMap: [:]
-        ),
-        isPro: true,
-        aiInsight: nil,
-        isGeneratingInsight: true,
-        onUpgradeTap: {}
-    )
-    .padding()
-    .environment(UserSettings())
-}
-
-#Preview("Free - With Upsell & Comparison") {
+#Preview("Pro - Multiple Categories") {
     SummaryCard(
         result: AnalysisResult(
             filters: .default,
@@ -443,15 +649,58 @@ private struct MetricDeltaIndicator: View {
                 )
             ),
             trendPoints: [
-                TrendPoint(date: Date(), value: 60, temperature: 96),
-                TrendPoint(date: Date(), value: 63, temperature: 96)
+                TrendPoint(date: Date().addingTimeInterval(-86400 * 5), value: 65, temperature: 96),
+                TrendPoint(date: Date().addingTimeInterval(-86400 * 3), value: 62, temperature: 96),
+                TrendPoint(date: Date(), value: 58, temperature: 96)
             ],
             acclimation: nil,
             sessionMap: [:]
         ),
+        allSessions: [],
+        isPro: true,
+        onUpgradeTap: {}
+    )
+    .padding()
+    .environment(UserSettings())
+}
+
+#Preview("Free - Deterministic with Cycling") {
+    SummaryCard(
+        result: AnalysisResult(
+            filters: .default,
+            comparison: PeriodComparison(
+                current: PeriodStats(
+                    periodStart: Date(),
+                    periodEnd: Date(),
+                    sessionCount: 6,
+                    totalDuration: 3600 * 2,
+                    totalCalories: 800,
+                    avgHeartRate: 61,
+                    maxHeartRate: 65,
+                    avgTemperature: 96
+                ),
+                previous: PeriodStats(
+                    periodStart: Date(),
+                    periodEnd: Date(),
+                    sessionCount: 4,
+                    totalDuration: 3600 * 1.5,
+                    totalCalories: 600,
+                    avgHeartRate: 65,
+                    maxHeartRate: 70,
+                    avgTemperature: 94
+                )
+            ),
+            trendPoints: [
+                TrendPoint(date: Date().addingTimeInterval(-86400 * 6), value: 68, temperature: 96),
+                TrendPoint(date: Date().addingTimeInterval(-86400 * 4), value: 65, temperature: 96),
+                TrendPoint(date: Date().addingTimeInterval(-86400 * 2), value: 62, temperature: 96),
+                TrendPoint(date: Date(), value: 58, temperature: 96)
+            ],
+            acclimation: nil,
+            sessionMap: [:]
+        ),
+        allSessions: [],
         isPro: false,
-        aiInsight: nil,
-        isGeneratingInsight: false,
         onUpgradeTap: {}
     )
     .padding()

@@ -18,6 +18,7 @@ struct heatlabApp: App {
         let schema = Schema([
             WorkoutSession.self,
             UserBaseline.self,
+            SessionTypeBaseline.self,  // Class-type baselines (e.g., Vinyasa, Pilates)
             ImportedWorkout.self  // iOS-only: tracks dismissed Apple Health workouts
         ])
         let config = ModelConfiguration(

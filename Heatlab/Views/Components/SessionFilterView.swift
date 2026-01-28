@@ -117,7 +117,7 @@ struct SessionFilterSheet: View {
                                 Circle()
                                     .fill(colorForBucket(bucket))
                                     .frame(width: 12, height: 12)
-                                Text(bucket.displayName)
+                                Text(bucket.displayName(for: userSettings.temperatureUnit))
                                     .foregroundStyle(.primary)
                                 Spacer()
                                 if filter.selectedTemperatureBuckets.contains(bucket) {
@@ -260,7 +260,7 @@ struct ActiveFiltersBar: View {
 
                     // Temperature chips
                     ForEach(Array(filter.selectedTemperatureBuckets), id: \.self) { bucket in
-                        FilterChip(label: bucket.displayName, color: colorForBucket(bucket)) {
+                        FilterChip(label: bucket.displayName(for: userSettings.temperatureUnit), color: colorForBucket(bucket)) {
                             filter.selectedTemperatureBuckets.remove(bucket)
                         }
                     }

@@ -12,7 +12,7 @@ struct SessionRowView: View {
     let session: SessionWithStats
     
     private var className: String {
-        settings.sessionTypeName(for: session.session.sessionTypeId) ?? "Session"
+        settings.sessionTypeName(for: session.session.sessionTypeId) ?? session.session.workoutTypeDisplayName
     }
     
     private var sessionIcon: String {

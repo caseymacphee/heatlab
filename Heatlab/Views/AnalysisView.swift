@@ -27,12 +27,7 @@ struct AnalysisView: View {
     @State private var sessions: [SessionWithStats] = []
     @State private var analysisResult: AnalysisResult?
     @State private var isLoading = true
-    
-    // AI insight state
-    @State private var aiInsight: String?
-    @State private var isGeneratingInsight = false
-    @State private var insightGenerationTask: Task<Void, Never>?
-    
+
     // Paywall state
     @State private var showingPaywall = false
     
@@ -44,7 +39,6 @@ struct AnalysisView: View {
     
     private let calculator = AnalysisCalculator()
     private let trendCalculator = TrendCalculator()
-    private let insightGenerator = AnalysisInsightGenerator()
     
     private var filters: AnalysisFilters {
         AnalysisFilters(
@@ -59,48 +53,69 @@ struct AnalysisView: View {
     }
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // MARK: - Period Picker (keep at top)
-                periodPickerSection
-
+        VStack(spacing: 0) {
+            // MARK: - Period Picker (always at top)
+            periodPickerSection
+                .padding(.horizontal)
+                .padding(.top)
+            
+            // MARK: - Filter Pills (always visible when filters active or data exists)
+            if let result = analysisResult, (result.hasData || hasActiveFilters) {
+                filterPillsSection
+                    .padding(.horizontal)
+                    .padding(.top, 20)
+            }
+            
+            Group {
                 if isLoading {
-                    loadingView
-                } else if let result = analysisResult {
-                    // MARK: - Filter Pills (always visible when filters active or data exists)
-                    // Show pills when there's data OR when filters are active (so user can clear them)
-                    if result.hasData || hasActiveFilters {
-                        filterPillsSection
+                    VStack {
+                        Spacer()
+                        ProgressView()
+                        Text("Loading analysis...")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 8)
+                        Spacer()
                     }
-                    
+                } else if let result = analysisResult {
                     if result.hasData {
-                        // MARK: - Summary Card (unified factual/AI summary + metrics)
-                        SummaryCard(
-                            result: result,
-                            isPro: subscriptionManager.isPro,
-                            aiInsight: aiInsight,
-                            isGeneratingInsight: isGeneratingInsight,
-                            onUpgradeTap: { showingPaywall = true }
-                        )
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 20) {
+                                // MARK: - Summary Card (unified factual/AI summary + metrics)
+                                SummaryCard(
+                                    result: result,
+                                    allSessions: sessions,
+                                    isPro: subscriptionManager.isPro,
+                                    onUpgradeTap: { showingPaywall = true }
+                                )
 
-                        // MARK: - Trend Chart
-                        trendChartSection(result: result)
+                                // MARK: - Trend Chart
+                                trendChartSection(result: result)
 
-                        // MARK: - Acclimation Signal
-                        if let acclimation = result.acclimation {
-                            AcclimationCardView(signal: acclimation)
-                        } else if result.comparison.current.sessionCount < 5 {
-                            // Hint about needing more sessions for acclimation
-                            acclimationHint(sessionsNeeded: 5 - result.comparison.current.sessionCount)
+                                // MARK: - Acclimation Signal
+                                if let acclimation = result.acclimation {
+                                    AcclimationCardView(signal: acclimation)
+                                } else if let bucket = selectedTemperatureBucket {
+                                    // Filtered by temp but not enough sessions in this bucket
+                                    bucketAcclimationHint(bucket: bucket)
+                                } else {
+                                    // No filter - explain the baseline system
+                                    baselineExplanationHint
+                                }
+                            }
+                            .padding()
+                            .padding(.bottom, 20)  // Extra padding to avoid tab bar clipping
                         }
                     } else {
-                        // MARK: - Empty State
-                        emptyStateView
+                        // MARK: - Empty State (fill remaining space, no fixed height)
+                        HLEmptyStateView(
+                            systemImage: SFSymbol.mindAndBody,
+                            title: "No Sessions Found",
+                            description: emptyStateDescription
+                        )
                     }
                 }
             }
-            .padding()
-            .padding(.bottom, 20)  // Extra padding to avoid tab bar clipping
         }
         .background(Color.hlBackground)
         .navigationTitle("Analysis")
@@ -420,33 +435,13 @@ struct AnalysisView: View {
     }
     
     
-    // MARK: - Loading & Empty States
-    
-    private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-            Text("Loading analysis...")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 300)
-    }
-    
-    private var emptyStateView: some View {
-        ContentUnavailableView(
-            "No Sessions Found",
-            systemImage: SFSymbol.mindAndBody,
-            description: Text(emptyStateDescription)
-        )
-        .frame(height: 250)
-    }
+    // MARK: - Empty State Description
     
     private var emptyStateDescription: String {
         var parts: [String] = []
         
         if let bucket = selectedTemperatureBucket {
-            parts.append("for \(bucket.displayName)")
+            parts.append("for \(bucket.displayName(for: settings.temperatureUnit))")
         }
         if let typeName = selectedClassTypeName {
             parts.append("for \(typeName)")
@@ -461,15 +456,31 @@ struct AnalysisView: View {
     
     // MARK: - Context Hints
     
-    private func acclimationHint(sessionsNeeded: Int) -> some View {
+    private var baselineExplanationHint: some View {
         HStack(spacing: 10) {
             Image(systemName: SFSymbol.thermometer)
                 .foregroundStyle(Color.hlAccent)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Building Your Heat Baseline")
+                Text("Temperature Baselines")
                     .font(.subheadline.bold())
-                Text("\(sessionsNeeded) more session\(sessionsNeeded == 1 ? "" : "s") needed to track heat acclimation progress")
+                Text("HeatLab tracks your heart rate baseline for each temperature range separately. Filter by temperature to see acclimation progress.")
+                    .font(.caption)
+                    .foregroundStyle(Color.hlMuted)
+            }
+        }
+        .heatLabHintCard(color: Color.hlAccent)
+    }
+
+    private func bucketAcclimationHint(bucket: TemperatureBucket) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: SFSymbol.thermometer)
+                .foregroundStyle(Color.hlAccent)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Building \(bucket.displayName(for: settings.temperatureUnit)) Baseline")
+                    .font(.subheadline.bold())
+                Text("Complete more sessions in this range to track acclimation progress.")
                     .font(.caption)
                     .foregroundStyle(Color.hlMuted)
             }
@@ -628,60 +639,6 @@ struct AnalysisView: View {
             print("📊 AnalysisView - hasData: \(result.hasData)")
             print("📊 AnalysisView - hasComparison: \(result.hasComparison)")
         }
-
-        // Clear existing insight and trigger new generation with debounce
-        aiInsight = nil
-        if subscriptionManager.isPro {
-            scheduleInsightGeneration()
-        }
-    }
-    
-    private func scheduleInsightGeneration() {
-        // Don't generate if AI not available
-        guard AnalysisInsightGenerator.isAvailable else { return }
-        
-        // Cancel any pending insight generation
-        insightGenerationTask?.cancel()
-        
-        // Debounce: wait a short moment before generating to avoid rapid requests
-        insightGenerationTask = Task {
-            // Small delay to debounce rapid filter changes
-            try? await Task.sleep(for: .milliseconds(300))
-            
-            guard !Task.isCancelled else { return }
-            
-            await generateInsight()
-        }
-    }
-    
-    @MainActor
-    private func generateInsight() async {
-        guard let result = analysisResult, result.hasData else {
-            aiInsight = nil
-            return
-        }
-        
-        isGeneratingInsight = true
-        
-        do {
-            let insight = try await insightGenerator.generateInsight(
-                for: result,
-                temperatureName: selectedTemperatureBucket?.displayName,
-                classTypeName: selectedClassTypeName
-            )
-            
-            // Only update if we haven't been cancelled (filters didn't change)
-            if !Task.isCancelled {
-                withAnimation {
-                    aiInsight = insight
-                }
-            }
-        } catch {
-            // Silently fail - insight is optional enhancement
-            print("Failed to generate insight: \(error)")
-        }
-        
-        isGeneratingInsight = false
     }
 }
 
@@ -804,7 +761,8 @@ private struct ChartCalloutView: View {
 
 private struct TemperatureLegendSheet: View {
     @Environment(\.dismiss) var dismiss
-    
+    @Environment(UserSettings.self) var settings
+
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 20) {
@@ -812,15 +770,15 @@ private struct TemperatureLegendSheet: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal)
-                
+
                 VStack(spacing: 0) {
                     ForEach(TemperatureBucket.allCases, id: \.self) { bucket in
                         HStack(spacing: 12) {
                             Circle()
                                 .fill(colorForBucket(bucket))
                                 .frame(width: 16, height: 16)
-                            
-                            Text(bucket.displayName)
+
+                            Text(bucket.displayName(for: settings.temperatureUnit))
                                 .font(.body)
                             
                             Spacer()

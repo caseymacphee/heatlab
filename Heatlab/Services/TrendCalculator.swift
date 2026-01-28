@@ -141,7 +141,7 @@ struct AcclimationSignal {
     var displayText: String {
         switch direction {
         case .improving:
-            return "Adapting well! Your avg HR at this heat is \(Int(abs(percentChange)))% lower than when you started."
+            return "Your avg HR at this heat is \(Int(abs(percentChange)))% lower than when you started."
         case .stable:
             return "Consistent performance at this temperature over \(sessionCount) sessions."
         }
