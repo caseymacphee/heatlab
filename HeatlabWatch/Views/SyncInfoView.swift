@@ -27,7 +27,7 @@ struct SyncInfoView: View {
                 
                 Text(statusDescription)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.watchTextSecondary)
                     .multilineTextAlignment(.center)
                 
                 Divider()
@@ -53,7 +53,7 @@ struct SyncInfoView: View {
                         syncEngine.isPhoneReachable ? "iPhone connected" : "iPhone not reachable",
                         systemImage: syncEngine.isPhoneReachable ? "iphone" : "iphone.slash"
                     )
-                    .foregroundStyle(syncEngine.isPhoneReachable ? .green : .secondary)
+                    .foregroundStyle(syncEngine.isPhoneReachable ? .green : Color.watchTextSecondary)
                 }
                 .font(.caption)
                 
@@ -82,7 +82,7 @@ struct SyncInfoView: View {
                     
                     Text("Sessions will sync automatically when your iPhone is nearby and the HeatLab app is running.")
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.watchTextSecondary)
                         .multilineTextAlignment(.center)
                 }
             }

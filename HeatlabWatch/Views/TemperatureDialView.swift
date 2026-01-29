@@ -41,6 +41,7 @@ struct TemperatureDialView: View {
     @State private var crownValue: Double = 0
     @State private var isViewReady = false
     @FocusState private var isFocused: Bool
+    @AppStorage("hasUsedTemperatureCrown") private var hasUsedCrown = false
     
     private var minTemp: Double { Double(unit.inputRange.lowerBound) }
     private var maxTemp: Double { Double(unit.inputRange.upperBound) }
@@ -51,13 +52,24 @@ struct TemperatureDialView: View {
             Text("\(temperature)\(unit.rawValue)")
                 .font(.system(size: 44, weight: .bold, design: .rounded))
                 .foregroundStyle(temperatureColor)
-            
+
             // Visual arc/gauge indicator
             TemperatureGaugeView(
                 temperature: temperature,
                 range: unit.inputRange
             )
             .frame(height: 40)
+
+            // Crown hint on first use only
+            if isFocused && !hasUsedCrown {
+                HStack(spacing: 4) {
+                    Image(systemName: "digitalcrown.horizontal.arrow.clockwise.fill")
+                    Text("Rotate to adjust")
+                }
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+                .transition(.opacity)
+            }
         }
         .contentShape(Rectangle())
         .onTapGesture {
@@ -76,14 +88,13 @@ struct TemperatureDialView: View {
             // Delay enabling focusable and crown until view is fully laid out
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 isViewReady = true
-                // Set focus after crown is ready
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    isFocused = true
-                }
             }
         }
         .onChange(of: crownValue) { _, newValue in
             temperature = Int(newValue.rounded())
+            if !hasUsedCrown {
+                hasUsedCrown = true
+            }
         }
     }
     

@@ -41,7 +41,7 @@ struct WatchHeartRateChartView: View {
                     .foregroundStyle(Color.HeatLab.heartRate)
                 Text("Collecting data...")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.watchTextSecondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {

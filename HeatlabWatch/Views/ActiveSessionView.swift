@@ -65,7 +65,7 @@ struct ActiveSessionView: View {
             // Elapsed Time
             Text(formatElapsedTime(workoutManager.elapsedTime))
                 .font(.system(size: 44, weight: .bold, design: .rounded))
-                .foregroundStyle(isPaused ? .yellow : .white)
+                .foregroundStyle(isPaused ? .yellow : Color.watchTextPrimary)
                 .monospacedDigit()
                 .opacity(isPaused ? 0.7 : 1.0)
 
@@ -78,10 +78,11 @@ struct ActiveSessionView: View {
                             .foregroundStyle(Color.HeatLab.heartRate)
                         Text(workoutManager.heartRate > 0 ? "\(Int(workoutManager.heartRate))" : "--")
                             .font(.title3.bold())
+                            .foregroundStyle(Color.watchTextPrimary)
                     }
                     Text("BPM")
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.watchTextSecondary)
                 }
 
                 // Calories (if enabled)
@@ -92,10 +93,11 @@ struct ActiveSessionView: View {
                                 .foregroundStyle(Color.HeatLab.calories)
                             Text(workoutManager.activeCalories > 0 ? "\(Int(workoutManager.activeCalories))" : "--")
                                 .font(.title3.bold())
+                                .foregroundStyle(Color.watchTextPrimary)
                         }
                         Text("Cal")
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.watchTextSecondary)
                     }
                 }
             }
@@ -139,7 +141,7 @@ struct ActiveSessionView: View {
             // Page indicator hint
             Image(systemName: "chevron.compact.down")
                 .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(Color.watchTextTertiary)
                 .padding(.top, 4)
         }
         .padding()
@@ -152,7 +154,7 @@ struct ActiveSessionView: View {
             // Page indicator hint
             Image(systemName: "chevron.compact.up")
                 .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(Color.watchTextTertiary)
 
             // Current HR display
             HStack(spacing: 4) {
@@ -160,9 +162,10 @@ struct ActiveSessionView: View {
                     .foregroundStyle(Color.HeatLab.heartRate)
                 Text(workoutManager.heartRate > 0 ? "\(Int(workoutManager.heartRate))" : "--")
                     .font(.title2.bold())
+                    .foregroundStyle(Color.watchTextPrimary)
                 Text("BPM")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.watchTextSecondary)
             }
 
             // Heart Rate Chart
@@ -178,18 +181,20 @@ struct ActiveSessionView: View {
                     VStack(spacing: 2) {
                         Text("\(Int(avgHR))")
                             .font(.caption.bold())
+                            .foregroundStyle(Color.watchTextPrimary)
                         Text("Avg")
                             .font(.system(size: 9))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.watchTextSecondary)
                     }
                 }
                 if let maxHR = maxHR {
                     VStack(spacing: 2) {
                         Text("\(Int(maxHR))")
                             .font(.caption.bold())
+                            .foregroundStyle(Color.watchTextPrimary)
                         Text("Max")
                             .font(.system(size: 9))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.watchTextSecondary)
                     }
                 }
             }

@@ -32,6 +32,24 @@ extension Color {
     static let hlProHighlight = Color("ProHighlight")
 }
 
+// MARK: - Watch Display Colors
+
+extension Color {
+    /// Warm off-white base color for watch displays
+    /// Slightly creamy/warm tone instead of pure blue-white
+    private static let watchWarmWhite = Color(red: 1.0, green: 0.98, blue: 0.94)
+
+    /// Primary watch text (timer, main values) - 88% opacity warm white
+    /// High contrast but not harsh for hot yoga studio environment
+    static let watchTextPrimary = watchWarmWhite.opacity(0.88)
+
+    /// Secondary watch text (labels like BPM, Cal) - 75% opacity warm white
+    static let watchTextSecondary = watchWarmWhite.opacity(0.75)
+
+    /// Tertiary watch text (hints, subtle labels) - 55% opacity warm white
+    static let watchTextTertiary = watchWarmWhite.opacity(0.55)
+}
+
 // MARK: - Legacy Brand Colors (Deprecated - use hl* colors)
 
 extension Color {
@@ -162,6 +180,8 @@ enum HeatLabShadow {
     /// Subtle shadow for elevated inputs (edit mode)
     static let subtle = (color: Color.black.opacity(0.05), radius: CGFloat(8), x: CGFloat(0), y: CGFloat(2))
 }
+
+// MARK: - SF Symbol Names
 
 // MARK: - SF Symbol Names
 

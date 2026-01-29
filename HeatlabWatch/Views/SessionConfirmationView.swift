@@ -26,7 +26,17 @@ struct SessionConfirmationView: View {
     let workout: HKWorkout
     let selectedSessionTypeId: UUID?  // Pre-selected in StartView
     let onComplete: () -> Void
-    
+
+    /// Display name: session type name if selected, otherwise workout type in title case
+    private var sessionTypeDisplayName: String {
+        if let typeId = selectedSessionTypeId,
+           let typeName = settings.sessionTypeName(for: typeId) {
+            return typeName
+        }
+        // Fallback to workout activity type in title case
+        return workout.workoutActivityType.displayName
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
@@ -34,15 +44,20 @@ struct SessionConfirmationView: View {
                 Text("Session Complete")
                     .font(.headline)
                     .foregroundStyle(Color.hlAccent)
-                
+
+                Text(sessionTypeDisplayName)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.watchTextSecondary)
+
                 // Summary stats
                 HStack(spacing: 16) {
                     VStack {
                         Text(formatDuration(workout.duration))
                             .font(.title3.bold())
+                            .foregroundStyle(Color.watchTextPrimary)
                         Text("Duration")
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.watchTextSecondary)
                     }
 
                     if let avgHR = workout.statistics(for: HKQuantityType(.heartRate))?.averageQuantity()?.doubleValue(for: HKUnit.count().unitDivided(by: .minute())) {
@@ -53,10 +68,11 @@ struct SessionConfirmationView: View {
                                     .font(.caption)
                                 Text("\(Int(avgHR))")
                                     .font(.title3.bold())
+                                    .foregroundStyle(Color.watchTextPrimary)
                             }
                             Text("Avg BPM")
                                 .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color.watchTextSecondary)
                         }
                     }
 
@@ -70,10 +86,11 @@ struct SessionConfirmationView: View {
                                     .font(.caption)
                                 Text("\(Int(calories))")
                                     .font(.title3.bold())
+                                    .foregroundStyle(Color.watchTextPrimary)
                             }
                             Text("Cal")
                                 .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color.watchTextSecondary)
                         }
                     }
                 }
@@ -88,39 +105,23 @@ struct SessionConfirmationView: View {
                 // Temperature Dial (only shown when heated)
                 if isHeated {
                     Divider()
-                    
+
                     Text("Temperature")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.watchTextSecondary)
                     
                     TemperatureDialView(temperature: $temperatureInput, unit: settings.temperatureUnit)
                         .frame(height: 100)
+                        .padding(.bottom, 20)
                         .prefersDefaultFocus(in: temperatureDialNamespace)
-                        .padding(.bottom, 4)
                 }
                 
                 Divider()
-                
-                // Show selected session type (if any) - read-only display
-                if let typeId = selectedSessionTypeId,
-                   let typeName = settings.sessionTypeName(for: typeId) {
-                    HStack {
-                        Text("Session Type")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text(typeName)
-                            .font(.caption.bold())
-                            .foregroundStyle(Color.hlAccent)
-                    }
-                    
-                    Divider()
-                }
 
                 // Perceived Effort - Wheel Picker
                 Text("Perceived Effort")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.watchTextSecondary)
 
                 EffortWheelPicker(selection: $selectedEffort)
                     .frame(height: 44)
@@ -139,7 +140,7 @@ struct SessionConfirmationView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color.hlAccent)
+                .tint(Color.hlAccent.opacity(0.85))
                 .disabled(isSaving)
                 .padding(.top, 8)
             }
@@ -216,10 +217,11 @@ struct SessionConfirmationView: View {
 private struct EffortWheelPicker: View {
     @Binding var selection: PerceivedEffort
 
-    private let efforts = PerceivedEffort.allCases
+    // Exclude .none since users wouldn't navigate here just to skip rating
+    private let efforts = PerceivedEffort.allCases.filter { $0 != .none }
 
     private var currentIndex: Int {
-        efforts.firstIndex(of: selection) ?? 3
+        efforts.firstIndex(of: selection) ?? 2  // Default to moderate
     }
 
     var body: some View {
@@ -238,7 +240,7 @@ private struct EffortWheelPicker: View {
                     Text(efforts[wrappedIndex(currentIndex - 1)].shortName)
                         .font(.caption2)
                 }
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.watchTextSecondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
             }
@@ -247,9 +249,9 @@ private struct EffortWheelPicker: View {
             // Center - current selection
             Text(selection.shortName)
                 .font(.caption.bold())
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.watchTextPrimary)
                 .frame(width: 56, height: 36)
-                .background(Color.hlAccent)
+                .background(Color.hlAccent.opacity(0.85))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
 
             // Right tap zone - go next
@@ -266,7 +268,7 @@ private struct EffortWheelPicker: View {
                     Image(systemName: "chevron.right")
                         .font(.caption2)
                 }
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.watchTextSecondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
             }
@@ -313,7 +315,7 @@ private struct SavedAnimationOverlay: View {
 
                 Text("Saved")
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.watchTextPrimary)
                     .opacity(checkmarkOpacity)
             }
         }
@@ -336,6 +338,21 @@ private struct SavedAnimationOverlay: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
                 onDismiss()
             }
+        }
+    }
+}
+
+// MARK: - HKWorkoutActivityType Display Name
+
+private extension HKWorkoutActivityType {
+    /// Title case display name for common workout types
+    var displayName: String {
+        switch self {
+        case .yoga: return "Yoga"
+        case .pilates: return "Pilates"
+        case .barre: return "Barre"
+        case .mindAndBody: return "Mind & Body"
+        default: return "Workout"
         }
     }
 }

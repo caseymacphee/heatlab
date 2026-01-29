@@ -76,16 +76,13 @@ final class WatchConnectivityReceiver: NSObject, ObservableObject {
             return
         }
         
-        // Required fields - workoutUUID is now the primary key for upserts
+        // Required fields - workoutUUID is the unique key for insert-only behavior
         guard let workoutUUIDString = data["workoutUUID"] as? String,
               let workoutUUID = UUID(uuidString: workoutUUIDString),
-              let startDateTimestamp = data["startDate"] as? TimeInterval,
-              let incomingUpdatedAtTimestamp = data["updatedAt"] as? TimeInterval else {
-            print("Invalid session data received - missing required fields (workoutUUID, startDate, updatedAt)")
+              let startDateTimestamp = data["startDate"] as? TimeInterval else {
+            print("Invalid session data received - missing required fields (workoutUUID, startDate)")
             return
         }
-        
-        let incomingUpdatedAt = Date(timeIntervalSince1970: incomingUpdatedAtTimestamp)
         
         // Optional fields - roomTemperature nil means unheated
         let roomTemperature = data["roomTemperature"] as? Int
@@ -96,15 +93,11 @@ final class WatchConnectivityReceiver: NSObject, ObservableObject {
         
         do {
             let existing = try modelContext.fetch(descriptor)
-            
+
             if let existingSession = existing.first {
-                // Only update if incoming data is newer
-                if incomingUpdatedAt > existingSession.updatedAt {
-                    updateSession(existingSession, from: data, roomTemperature: roomTemperature)
-                    print("Updated session \(workoutUUID) - incoming updatedAt \(incomingUpdatedAt) > existing \(existingSession.updatedAt)")
-                } else {
-                    print("Skipped update for session \(workoutUUID) - incoming updatedAt \(incomingUpdatedAt) <= existing \(existingSession.updatedAt)")
-                }
+                // Session already exists for this workoutUUID - do not overwrite
+                // This protects imported sessions from being replaced by late watch syncs
+                print("Session already exists for workoutUUID \(workoutUUID) (id: \(existingSession.id)) - skipping (insert-only)")
             } else {
                 // Create new session
                 let session = createSession(from: data, workoutUUID: workoutUUID, startDate: Date(timeIntervalSince1970: startDateTimestamp), roomTemperature: roomTemperature)

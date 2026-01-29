@@ -14,6 +14,7 @@ struct StartView: View {
     @Environment(UserSettings.self) var settings
     
     @State private var selectedTypeId: UUID?
+    @AppStorage("hasSeenSessionTypeHint") private var hasSeenHint = false
     
     /// Visible session types from settings
     private var visibleTypes: [SessionTypeConfig] {
@@ -55,9 +56,20 @@ struct StartView: View {
                                 action: {
                                     // Toggle selection
                                     selectedTypeId = selectedTypeId == typeConfig.id ? nil : typeConfig.id
+                                    hasSeenHint = true
                                 }
                             )
                         }
+                    }
+
+                    // First-use hint about customization
+                    if !hasSeenHint {
+                        Text("Edit session types in iPhone app")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                            .padding(.top, -4)
+                            .padding(.bottom, -4)
+                            .transition(.opacity)
                     }
                 }
                 
@@ -81,7 +93,7 @@ struct StartView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.accentColor)
+                .tint(Color.hlAccent.opacity(0.85))
                 .disabled(workoutManager.phase != .idle)
                 .padding(.top, 8)
             }
@@ -139,8 +151,8 @@ private struct SessionTypeButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
-            .background(isSelected ? Color.hlAccent : Color.gray.opacity(0.3))
-            .foregroundStyle(isSelected ? .white : .gray)
+            .background(isSelected ? Color.hlAccent.opacity(0.85) : Color.gray.opacity(0.3))
+            .foregroundStyle(isSelected ? Color.watchTextPrimary : Color.watchTextSecondary)
             .clipShape(RoundedRectangle(cornerRadius: HLRadius.card))
         }
         .buttonStyle(.plain)

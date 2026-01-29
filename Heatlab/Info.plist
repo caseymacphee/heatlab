@@ -2,18 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
 		<string>Background</string>
 	</dict>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>remote-notification</string>
-	</array>
-	<key>NSHealthShareUsageDescription</key>
-	<string>HeatLab reads your heart rate, workout data, and active calories to track your sessions and show personalized insights.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>HeatLab saves your workout sessions to Health.</string>
 </dict>
 </plist>
