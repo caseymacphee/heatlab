@@ -138,10 +138,6 @@ struct SyncInfoView: View {
     }
 }
 
-// Keep old name for backwards compatibility during migration
-@available(*, deprecated, renamed: "SyncInfoView")
-typealias iCloudPromptView = SyncInfoView
-
 #Preview {
     SyncInfoView()
         .environment(SyncEngine())

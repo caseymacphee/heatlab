@@ -160,29 +160,7 @@ final class SessionRepository {
     
     private func fetchHeartRateSamples(for workout: HKWorkout?) async throws -> [HKQuantitySample] {
         guard let workout = workout else { return [] }
-        
-        let hrType = HKQuantityType(.heartRate)
-        let predicate = HKQuery.predicateForSamples(
-            withStart: workout.startDate,
-            end: workout.endDate,
-            options: .strictStartDate
-        )
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            let query = HKSampleQuery(
-                sampleType: hrType,
-                predicate: predicate,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
-            ) { _, samples, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                continuation.resume(returning: (samples as? [HKQuantitySample]) ?? [])
-            }
-            healthStore.execute(query)
-        }
+        return try await HealthKitUtility.fetchHeartRateSamples(healthStore: healthStore, for: workout)
     }
     
     private func computeStats(hrSamples: [HKQuantitySample], workout: HKWorkout?, session: WorkoutSession) -> SessionStats {

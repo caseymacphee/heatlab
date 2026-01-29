@@ -276,39 +276,15 @@ final class HealthKitImporter {
     }
     
     // MARK: - Heart Rate Data
-    
+
     /// Fetches heart rate samples for a workout
     func fetchHeartRateSamples(for workout: HKWorkout) async throws -> [HKQuantitySample] {
-        let hrType = HKQuantityType(.heartRate)
-        let predicate = HKQuery.predicateForSamples(
-            withStart: workout.startDate,
-            end: workout.endDate,
-            options: .strictStartDate
-        )
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            let query = HKSampleQuery(
-                sampleType: hrType,
-                predicate: predicate,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
-            ) { _, samples, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                continuation.resume(returning: (samples as? [HKQuantitySample]) ?? [])
-            }
-            healthStore.execute(query)
-        }
+        try await HealthKitUtility.fetchHeartRateSamples(healthStore: healthStore, for: workout)
     }
-    
+
     /// Computes average heart rate from samples
     func computeAverageHeartRate(samples: [HKQuantitySample]) -> Double {
-        guard !samples.isEmpty else { return 0 }
-        let hrUnit = HKUnit.count().unitDivided(by: .minute())
-        let hrValues = samples.map { $0.quantity.doubleValue(for: hrUnit) }
-        return hrValues.reduce(0, +) / Double(hrValues.count)
+        HealthKitUtility.computeAverageHeartRate(samples: samples)
     }
     
     // MARK: - Private Helpers

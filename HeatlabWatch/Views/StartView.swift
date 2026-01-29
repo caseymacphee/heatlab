@@ -59,10 +59,6 @@ struct StartView: View {
                             )
                         }
                     }
-
-                    Text("Edit session types in iPhone Settings")
-                        .font(.caption2)
-                        .foregroundStyle(Color.hlMuted.opacity(0.7))
                 }
                 
                 // Start button

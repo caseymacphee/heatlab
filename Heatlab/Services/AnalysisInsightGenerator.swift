@@ -8,9 +8,6 @@
 import Foundation
 import FoundationModels
 import Observation
-#if canImport(UIKit)
-import UIKit
-#endif
 
 // MARK: - Apple Intelligence Availability
 
