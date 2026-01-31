@@ -172,6 +172,19 @@ struct SessionDetailView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .heatLabSecondaryCard()
+
+            // Source (only shown when known)
+            if session.session.source != .unknown {
+                HStack {
+                    Text("Source")
+                        .font(.headline)
+                    Spacer()
+                    Text(session.session.source.displayName)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+                .heatLabSecondaryCard()
+            }
         }
         .sheet(isPresented: $showingPaywall) {
             PaywallView()

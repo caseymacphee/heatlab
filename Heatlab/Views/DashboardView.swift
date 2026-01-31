@@ -21,8 +21,13 @@ struct DashboardView: View {
     @State private var weekComparison: PeriodComparison?
     @State private var analysisResult: AnalysisResult?
     @State private var claimableWorkoutCount: Int = 0
+    @State private var claimableIsRecent: Bool = false  // True when using smart cutoff optimization
+    @State private var singleClaimableWorkout: ClaimableWorkout?  // Pre-fetched when count == 1
+    @State private var claimWorkoutToShow: ClaimableWorkout?  // For direct navigation
     @State private var showingClaimList = false
     @State private var showingWatchInstructions = false
+    @State private var totalSessionCount: Int = 0  // For differentiating empty vs zero state
+    @State private var mostRecentSessionDate: Date? = nil  // For inactivity insight
 
     private let analysisCalculator = AnalysisCalculator()
 
@@ -102,21 +107,52 @@ struct DashboardView: View {
                     ProgressView("Loading...")
                     Spacer()
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if totalSessionCount == 0 {
+                // MARK: - Empty State (no sessions ever - show onboarding)
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Onboarding card (integrates claim CTA)
+                        GettingStartedCard(
+                            claimableCount: claimableWorkoutCount,
+                            onStartWatch: { showingWatchInstructions = true },
+                            onClaimWorkouts: {
+                                if let workout = singleClaimableWorkout {
+                                    claimWorkoutToShow = workout
+                                } else {
+                                    showingClaimList = true
+                                }
+                            }
+                        )
+
+                        // Skeleton previews show what dashboard will look like
+                        DashboardPreviewSection()
+                    }
+                    .padding()
+                    .padding(.bottom, 20)  // Clear tab bar
+                }
             } else if let comparison = weekComparison, comparison.current.sessionCount > 0 {
+                // MARK: - Normal State (sessions in current 7-day period)
                 ScrollView {
                     VStack(spacing: 20) {
                         // MARK: - Claim Workouts CTA (when claimable workouts exist)
                         if claimableWorkoutCount > 0 {
-                            ClaimWorkoutsCTA(count: claimableWorkoutCount) {
-                                showingClaimList = true
+                            ClaimWorkoutsCTA(count: claimableWorkoutCount, isRecent: claimableIsRecent) {
+                                if let workout = singleClaimableWorkout {
+                                    // Skip list and go directly to detail when only 1 workout
+                                    claimWorkoutToShow = workout
+                                } else {
+                                    showingClaimList = true
+                                }
                             }
                         }
-                        
+
                         // MARK: - Insight Preview (taps to Analysis tab)
                         InsightPreviewCard(
                             result: analysisResult,
                             allSessions: sessions,
                             isPro: subscriptionManager.isPro,
+                            lastSessionDate: mostRecentSessionDate,
                             onTap: { selectedTab = 1 }
                         )
 
@@ -159,22 +195,60 @@ struct DashboardView: View {
                     }
                     .padding()
                 }
-            } else {
-                // MARK: - Empty State (onboarding + skeleton previews)
+            } else if let comparison = weekComparison {
+                // MARK: - Zero State (sessions exist but none in past 7 days)
                 ScrollView {
                     VStack(spacing: 20) {
-                        // Onboarding card (integrates claim CTA)
+                        // Claim Workouts CTA (if applicable)
+                        if claimableWorkoutCount > 0 {
+                            ClaimWorkoutsCTA(count: claimableWorkoutCount, isRecent: claimableIsRecent) {
+                                if let workout = singleClaimableWorkout {
+                                    claimWorkoutToShow = workout
+                                } else {
+                                    showingClaimList = true
+                                }
+                            }
+                        }
+
+                        // Insight card showing inactivity message
+                        InsightPreviewCard(
+                            result: analysisResult,
+                            allSessions: sessions,
+                            isPro: subscriptionManager.isPro,
+                            lastSessionDate: mostRecentSessionDate,
+                            onTap: { selectedTab = 1 }
+                        )
+
+                        // Past 7 Days Stats (will show 0 sessions, "--" for averages)
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Past 7 Days")
+                                .font(.headline)
+
+                            StatsGrid(comparison: comparison, trendPoints: [])
+                        }
+                        .heatLabCard()
+                    }
+                    .padding()
+                }
+            } else {
+                // Fallback (should not occur, but safe)
+                ScrollView {
+                    VStack(spacing: 20) {
                         GettingStartedCard(
                             claimableCount: claimableWorkoutCount,
                             onStartWatch: { showingWatchInstructions = true },
-                            onClaimWorkouts: { showingClaimList = true }
+                            onClaimWorkouts: {
+                                if let workout = singleClaimableWorkout {
+                                    claimWorkoutToShow = workout
+                                } else {
+                                    showingClaimList = true
+                                }
+                            }
                         )
-                        
-                        // Skeleton previews show what dashboard will look like
                         DashboardPreviewSection()
                     }
                     .padding()
-                    .padding(.bottom, 20)  // Clear tab bar
+                    .padding(.bottom, 20)
                 }
             }
         }
@@ -201,6 +275,15 @@ struct DashboardView: View {
         .navigationDestination(isPresented: $showingClaimList) {
             ClaimListView()
         }
+        .navigationDestination(item: $claimWorkoutToShow) { workout in
+            ClaimDetailView(
+                workout: workout,
+                onClaimed: {
+                    claimWorkoutToShow = nil
+                    Task { await loadData() }
+                }
+            )
+        }
         .sheet(isPresented: $showingWatchInstructions) {
             WatchInstructionsSheet()
         }
@@ -215,16 +298,28 @@ struct DashboardView: View {
     private func loadData() async {
         isLoading = true
         let repo = SessionRepository(modelContext: modelContext)
-        
+
         // Request HealthKit read authorization (no-op if already granted)
         try? await repo.requestHealthKitAuthorization()
-        
-        // Dashboard shows "Past 7 Days" which is the free tier, so we fetch all sessions
-        // and filter locally (needed for previous period comparison)
-        sessions = (try? await repo.fetchAllSessionsWithStats()) ?? []
+
+        // Fetch total session count first (lightweight, no HealthKit) for empty vs zero state
+        totalSessionCount = (try? repo.fetchTotalSessionCount()) ?? 0
+        if totalSessionCount > 0 {
+            mostRecentSessionDate = try? repo.fetchMostRecentSessionDate()
+        } else {
+            mostRecentSessionDate = nil
+        }
+
+        // Dashboard shows "Past 7 Days" + comparison to previous 7 days, so we only need 14 days
+        // This optimization avoids N+1 HealthKit queries for old sessions
+        let calendar = Calendar.current
+        let startOfToday = calendar.startOfDay(for: Date())
+        let fourteenDaysAgo = calendar.date(byAdding: .day, value: -14, to: startOfToday)
+        sessions = (try? await repo.fetchSessionsWithStats(from: fourteenDaysAgo)) ?? []
 
         // DEBUG: Check session data
-        print("📊 DashboardView - Total sessions: \(sessions.count)")
+        print("📊 DashboardView - Total sessions: \(totalSessionCount)")
+        print("📊 DashboardView - Sessions (14 days): \(sessions.count)")
         print("📊 DashboardView - Sessions with HR: \(sessions.filter { $0.stats.averageHR > 0 }.count)")
         print("📊 DashboardView - Recent sessions (Past 7 Days): \(recentSessions.count)")
 
@@ -232,28 +327,48 @@ struct DashboardView: View {
         weekComparison = calculateLast7DaysComparison()
         print("📊 DashboardView - Past 7 Days sessions: \(weekComparison?.current.sessionCount ?? 0)")
 
-        // Generate analysis result for insight card
-        if let comparison = weekComparison, comparison.current.sessionCount > 0 {
-            analysisResult = analysisCalculator.analyze(
-                sessions: sessions,
-                filters: AnalysisFilters(temperatureBucket: nil, sessionTypeId: nil, period: .week),
-                isPro: subscriptionManager.isPro
-            )
+        // Generate analysis result for insight card (including zero state for inactivity insight)
+        if let comparison = weekComparison {
+            if comparison.current.sessionCount > 0 {
+                analysisResult = analysisCalculator.analyze(
+                    sessions: sessions,
+                    filters: AnalysisFilters(temperatureBucket: nil, sessionTypeId: nil, period: .week),
+                    isPro: subscriptionManager.isPro
+                )
+            } else if totalSessionCount > 0 {
+                // Zero state: create minimal result for inactivity insight
+                analysisResult = AnalysisResult(
+                    filters: AnalysisFilters(temperatureBucket: nil, sessionTypeId: nil, period: .week),
+                    comparison: comparison,
+                    trendPoints: [],
+                    acclimation: nil,
+                    sessionMap: [:]
+                )
+            } else {
+                analysisResult = nil
+            }
         } else {
             analysisResult = nil
         }
         
         // Check for claimable workouts from Apple Health
+        // Uses smart cutoff optimization: only fetches workouts newer than most recently claimed
         let importer = HealthKitImporter(modelContext: modelContext)
         do {
-            claimableWorkoutCount = try await importer.claimableWorkoutCount(
+            let (workouts, isRecent) = try await importer.fetchRecentClaimableWorkouts(
                 isPro: subscriptionManager.isPro,
                 enabledTypes: settings.enabledWorkoutTypes
             )
-            print("📊 DashboardView - Claimable workouts: \(claimableWorkoutCount)")
+            claimableWorkoutCount = workouts.count
+            claimableIsRecent = isRecent
+            // Pre-fetch single workout for direct navigation optimization
+            singleClaimableWorkout = workouts.count == 1 ? workouts.first : nil
+            print("📊 DashboardView - Claimable workouts: \(claimableWorkoutCount) (recent: \(isRecent))")
         } catch {
             print("📊 DashboardView - Failed to fetch claimable workouts: \(error)")
             claimableWorkoutCount = 0
+            claimableIsRecent = false
+            singleClaimableWorkout = nil
         }
 
         isLoading = false
@@ -326,7 +441,16 @@ struct DashboardView: View {
 
 struct ClaimWorkoutsCTA: View {
     let count: Int
+    let isRecent: Bool  // True when showing "Recent" workouts (smart cutoff optimization)
     let onTap: () -> Void
+
+    private var titleText: String {
+        if count == 1 {
+            return isRecent ? "1 Recent Workout to Claim" : "1 Workout to Claim"
+        } else {
+            return isRecent ? "\(count) Recent Workouts to Claim" : "\(count) Workouts to Claim"
+        }
+    }
 
     var body: some View {
         Button(action: onTap) {
@@ -336,7 +460,7 @@ struct ClaimWorkoutsCTA: View {
                     .foregroundStyle(Color.hlAccent)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(count == 1 ? "1 Workout to Claim" : "\(count) Workouts to Claim")
+                    Text(titleText)
                         .font(.headline)
                         .foregroundStyle(Color.hlText)
 
@@ -398,8 +522,10 @@ private struct StatItem: View {
 
 #Preview("Claim CTA") {
     VStack {
-        ClaimWorkoutsCTA(count: 3) { }
-        ClaimWorkoutsCTA(count: 1) { }
+        ClaimWorkoutsCTA(count: 3, isRecent: false) { }
+        ClaimWorkoutsCTA(count: 3, isRecent: true) { }
+        ClaimWorkoutsCTA(count: 1, isRecent: false) { }
+        ClaimWorkoutsCTA(count: 1, isRecent: true) { }
     }
     .padding()
 }

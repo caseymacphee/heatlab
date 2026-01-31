@@ -355,26 +355,28 @@ struct ClaimDetailView: View {
     
     private func saveWorkout() {
         isSaving = true
-        
+
         let importer = HealthKitImporter(modelContext: modelContext)
-        
+
         do {
             // Claim the workout and create a WorkoutSession
+            // Pass duplicateUUIDs to auto-dismiss duplicate workouts from other sources
             let session = try importer.claimWorkout(
                 workout.workout,
                 roomTemperature: isHeated ? temperature : nil,
                 sessionTypeId: sessionTypeId,
                 perceivedEffort: perceivedEffort,
-                notes: notes.isEmpty ? nil : notes
+                notes: notes.isEmpty ? nil : notes,
+                duplicateUUIDs: workout.duplicateUUIDs
             )
-            
+
             // Update baseline with the session's heart rate
             // Use the workout's startDate to maintain proper chronological ordering
             if averageHR > 0 {
                 let baselineEngine = BaselineEngine(modelContext: modelContext)
                 baselineEngine.updateBaseline(for: session, averageHR: averageHR)
             }
-            
+
             isSaving = false
             onClaimed()
         } catch {

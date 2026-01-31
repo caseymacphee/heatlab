@@ -17,6 +17,7 @@ struct SummaryCard: View {
     let result: AnalysisResult
     let allSessions: [SessionWithStats]
     let isPro: Bool
+    let lastSessionDate: Date?  // For inactivity insight when zero sessions in period
     let onUpgradeTap: () -> Void
 
     // MARK: - Deterministic Insight State
@@ -109,7 +110,8 @@ struct SummaryCard: View {
             from: result,
             allSessions: allSessions,
             sessionTypes: settings.manageableSessionTypes,
-            temperatureUnit: settings.temperatureUnit
+            temperatureUnit: settings.temperatureUnit,
+            lastSessionDate: lastSessionDate
         )
 
         // Reset index if out of bounds
@@ -142,7 +144,7 @@ struct SummaryCard: View {
             case .progression: return .progression
             case .acclimation: return .acclimation
             // These don't have AI equivalents
-            case .peakSession, .hrConsistency, .volume: return nil
+            case .peakSession, .hrConsistency, .inactivity, .volume: return nil
             }
         }
     }
@@ -616,6 +618,7 @@ private struct MetricDeltaIndicator: View {
         ),
         allSessions: [],
         isPro: true,
+        lastSessionDate: nil,
         onUpgradeTap: {}
     )
     .padding()
@@ -658,6 +661,7 @@ private struct MetricDeltaIndicator: View {
         ),
         allSessions: [],
         isPro: true,
+        lastSessionDate: nil,
         onUpgradeTap: {}
     )
     .padding()
@@ -701,6 +705,7 @@ private struct MetricDeltaIndicator: View {
         ),
         allSessions: [],
         isPro: false,
+        lastSessionDate: nil,
         onUpgradeTap: {}
     )
     .padding()

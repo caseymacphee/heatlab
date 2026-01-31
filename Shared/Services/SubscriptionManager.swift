@@ -30,8 +30,8 @@ enum PurchaseState: Equatable {
 @Observable
 final class SubscriptionManager {
     // MARK: - Published State
-    
-    /// Whether the user has an active Pro subscription
+
+    /// Whether the user has an active Pro subscription (from entitlement)
     private(set) var isPro: Bool = false
     
     /// Available subscription products loaded from App Store

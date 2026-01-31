@@ -27,6 +27,8 @@ struct AnalysisView: View {
     @State private var sessions: [SessionWithStats] = []
     @State private var analysisResult: AnalysisResult?
     @State private var isLoading = true
+    @State private var totalSessionCount: Int = 0  // For differentiating empty vs zero state
+    @State private var mostRecentSessionDate: Date? = nil  // For inactivity insight
 
     // Paywall state
     @State private var showingPaywall = false
@@ -77,8 +79,10 @@ struct AnalysisView: View {
                             .padding(.top, 8)
                         Spacer()
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let result = analysisResult {
                     if result.hasData {
+                        // MARK: - Normal State (sessions in current period/filters)
                         ScrollView {
                             VStack(alignment: .leading, spacing: 20) {
                                 // MARK: - Summary Card (unified factual/AI summary + metrics)
@@ -86,6 +90,7 @@ struct AnalysisView: View {
                                     result: result,
                                     allSessions: sessions,
                                     isPro: subscriptionManager.isPro,
+                                    lastSessionDate: mostRecentSessionDate,
                                     onUpgradeTap: { showingPaywall = true }
                                 )
 
@@ -106,8 +111,27 @@ struct AnalysisView: View {
                             .padding()
                             .padding(.bottom, 20)  // Extra padding to avoid tab bar clipping
                         }
+                    } else if totalSessionCount > 0 {
+                        // MARK: - Zero State (sessions exist but none match current period/filters)
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 20) {
+                                // Summary card with inactivity insight + zeroed metrics
+                                SummaryCard(
+                                    result: result,
+                                    allSessions: sessions,
+                                    isPro: subscriptionManager.isPro,
+                                    lastSessionDate: mostRecentSessionDate,
+                                    onUpgradeTap: { showingPaywall = true }
+                                )
+
+                                // Empty trend chart section (shows "No Data for Period")
+                                trendChartSection(result: result)
+                            }
+                            .padding()
+                            .padding(.bottom, 20)
+                        }
                     } else {
-                        // MARK: - Empty State (fill remaining space, no fixed height)
+                        // MARK: - Empty State (no sessions ever)
                         HLEmptyStateView(
                             systemImage: SFSymbol.mindAndBody,
                             title: "No Sessions Found",
@@ -124,7 +148,10 @@ struct AnalysisView: View {
             await loadData()
         }
         .onChange(of: selectedPeriod) { _, _ in
-            updateAnalysis()
+            // Period change requires re-fetching data (different date cutoffs)
+            Task {
+                await loadData()
+            }
         }
         .onChange(of: selectedTemperatureBucket) { _, _ in
             updateAnalysis()
@@ -610,20 +637,52 @@ struct AnalysisView: View {
     }
     
     // MARK: - Data Loading
-    
+
     private func loadData() async {
         isLoading = true
         let repo = SessionRepository(modelContext: modelContext)
-        
-        // Fetch all sessions (analysis uses full history for trends)
-        sessions = (try? await repo.fetchAllSessionsWithStats()) ?? []
+
+        // Fetch total session count first (lightweight, no HealthKit) for empty vs zero state
+        totalSessionCount = (try? repo.fetchTotalSessionCount()) ?? 0
+        if totalSessionCount > 0 {
+            mostRecentSessionDate = try? repo.fetchMostRecentSessionDate()
+        } else {
+            mostRecentSessionDate = nil
+        }
+
+        // Fetch sessions based on selected period - avoid loading entire history
+        // Each period needs current + previous for comparison
+        let cutoffDate = periodCutoffDate(for: selectedPeriod)
+        sessions = (try? await repo.fetchSessionsWithStats(from: cutoffDate)) ?? []
 
         // DEBUG: Check session data
-        print("📊 AnalysisView - Total sessions: \(sessions.count)")
+        print("📊 AnalysisView - Total sessions: \(totalSessionCount)")
+        print("📊 AnalysisView - Sessions (period: \(selectedPeriod.rawValue)): \(sessions.count)")
         print("📊 AnalysisView - Sessions with HR: \(sessions.filter { $0.stats.averageHR > 0 }.count)")
 
         updateAnalysis()
         isLoading = false
+    }
+
+    /// Calculate cutoff date for fetching - needs 2x period for comparison
+    private func periodCutoffDate(for period: AnalysisPeriod) -> Date? {
+        let calendar = Calendar.current
+        let now = Date()
+
+        switch period {
+        case .week:
+            // Week view: need 14 days (current + previous week)
+            return calendar.date(byAdding: .day, value: -14, to: now)
+        case .month:
+            // Month view: need 2 months
+            return calendar.date(byAdding: .month, value: -2, to: now)
+        case .threeMonth:
+            // 3-month view: need 6 months
+            return calendar.date(byAdding: .month, value: -6, to: now)
+        case .year:
+            // Year view: need 2 years (or unlimited for pro)
+            return subscriptionManager.isPro ? nil : calendar.date(byAdding: .year, value: -2, to: now)
+        }
     }
     
     private func updateAnalysis() {

@@ -142,17 +142,20 @@ final class WatchConnectivityReceiver: NSObject, ObservableObject {
     
     private func createSession(from data: [String: Any], workoutUUID: UUID, startDate: Date, roomTemperature: Int?) -> WorkoutSession {
         let session = WorkoutSession(workoutUUID: workoutUUID, startDate: startDate, roomTemperature: roomTemperature)
-        
+
         // Override id if provided (for cross-device consistency)
         if let idString = data["id"] as? String, let id = UUID(uuidString: idString) {
             session.id = id
         }
-        
+
         updateSession(session, from: data, roomTemperature: roomTemperature)
-        
+
         // Mark as synced since it came from Watch via relay
         session.syncState = .synced
-        
+
+        // Set source as HeatLab Watch - highest priority for deduplication
+        session.source = .heatlabWatch
+
         return session
     }
     

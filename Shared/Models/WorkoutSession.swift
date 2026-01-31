@@ -16,6 +16,45 @@ enum SyncState: String, Codable {
     case failed     // Sync failed, will retry
 }
 
+/// Source of a workout for deduplication priority
+/// Lower rawValue = higher priority (HeatLab Watch is most trusted)
+enum WorkoutSource: Int, Codable, CaseIterable {
+    case heatlabWatch = 0   // Highest priority - native app
+    case appleWatch = 1     // Apple's native workout app
+    case garmin = 2         // Good HR data
+    case whoop = 3          // Continuous HR monitoring
+    case oura = 4           // Sleep/recovery focused
+    case strava = 5         // Often aggregates from other sources, no HR sampler
+    case unknown = 99       // Unknown/unidentified source
+
+    /// Detect source from HKWorkout bundle identifier
+    static func from(bundleIdentifier: String?) -> WorkoutSource {
+        guard let bundle = bundleIdentifier?.lowercased() else { return .unknown }
+
+        if bundle.contains("com.macpheelabs.heatlab") { return .heatlabWatch }
+        if bundle.contains("com.apple.health") || bundle.contains("com.apple.workout") { return .appleWatch }
+        if bundle.contains("garmin") { return .garmin }
+        if bundle.contains("whoop") { return .whoop }
+        if bundle.contains("oura") { return .oura }
+        if bundle.contains("strava") { return .strava }
+
+        return .unknown
+    }
+
+    /// Human-readable name for display
+    var displayName: String {
+        switch self {
+        case .heatlabWatch: return "HeatLab Watch"
+        case .appleWatch: return "Apple Watch"
+        case .garmin: return "Garmin"
+        case .whoop: return "Whoop"
+        case .oura: return "Oura"
+        case .strava: return "Strava"
+        case .unknown: return "Unknown"
+        }
+    }
+}
+
 /// Perceived effort level for a session
 enum PerceivedEffort: String, Codable, CaseIterable {
     case none = "none"
@@ -77,15 +116,47 @@ final class WorkoutSession {
     var syncStateRaw: String = SyncState.pending.rawValue
     var lastSyncError: String?
     var deletedAt: Date?  // Tombstone for soft deletes
+
+    // Source tracking for deduplication
+    var sourceRaw: Int = WorkoutSource.unknown.rawValue
+    var relatedWorkoutUUIDsJSON: String?  // JSON array of UUID strings for duplicate workouts
     
     var syncState: SyncState {
         get { SyncState(rawValue: syncStateRaw) ?? .pending }
         set { syncStateRaw = newValue.rawValue }
     }
-    
+
     var perceivedEffort: PerceivedEffort {
         get { PerceivedEffort(rawValue: perceivedEffortRaw) ?? .none }
         set { perceivedEffortRaw = newValue.rawValue }
+    }
+
+    var source: WorkoutSource {
+        get { WorkoutSource(rawValue: sourceRaw) ?? .unknown }
+        set { sourceRaw = newValue.rawValue }
+    }
+
+    /// UUIDs of duplicate workouts that were dismissed when this one was claimed
+    var relatedWorkoutUUIDs: [UUID]? {
+        get {
+            guard let json = relatedWorkoutUUIDsJSON,
+                  let data = json.data(using: .utf8),
+                  let strings = try? JSONDecoder().decode([String].self, from: data) else {
+                return nil
+            }
+            return strings.compactMap { UUID(uuidString: $0) }
+        }
+        set {
+            guard let uuids = newValue, !uuids.isEmpty else {
+                relatedWorkoutUUIDsJSON = nil
+                return
+            }
+            let strings = uuids.map { $0.uuidString }
+            if let data = try? JSONEncoder().encode(strings),
+               let json = String(data: data, encoding: .utf8) {
+                relatedWorkoutUUIDsJSON = json
+            }
+        }
     }
     
     /// Display name for the workout type (Yoga, Pilates, Barre)

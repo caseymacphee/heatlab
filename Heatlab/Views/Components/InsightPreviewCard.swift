@@ -16,6 +16,7 @@ struct InsightPreviewCard: View {
     let result: AnalysisResult?
     let allSessions: [SessionWithStats]
     let isPro: Bool
+    let lastSessionDate: Date?  // For inactivity insight generation when zero sessions in period
     let onTap: () -> Void
 
     // MARK: - Deterministic Insight State
@@ -160,7 +161,8 @@ struct InsightPreviewCard: View {
             from: result,
             allSessions: allSessions,
             sessionTypes: settings.manageableSessionTypes,
-            temperatureUnit: settings.temperatureUnit
+            temperatureUnit: settings.temperatureUnit,
+            lastSessionDate: lastSessionDate
         )
 
         // Reset index if out of bounds
@@ -191,7 +193,7 @@ struct InsightPreviewCard: View {
             case .periodOverPeriod: return .periodOverPeriod
             case .progression: return .progression
             case .acclimation: return .acclimation
-            case .peakSession, .hrConsistency, .volume: return nil
+            case .peakSession, .hrConsistency, .inactivity, .volume: return nil
             }
         }
     }
@@ -383,6 +385,7 @@ struct InsightPreviewCard: View {
             ),
             allSessions: [],
             isPro: false,
+            lastSessionDate: nil,
             onTap: {}
         )
     }
@@ -417,6 +420,7 @@ struct InsightPreviewCard: View {
             ),
             allSessions: [],
             isPro: true,
+            lastSessionDate: nil,
             onTap: {}
         )
     }
@@ -430,6 +434,7 @@ struct InsightPreviewCard: View {
             result: nil,
             allSessions: [],
             isPro: false,
+            lastSessionDate: nil,
             onTap: {}
         )
     }

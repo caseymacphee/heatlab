@@ -19,6 +19,7 @@ enum InsightCategory: String, CaseIterable {
     case hrConsistency
     case acclimation
     case progression
+    case inactivity  // "Your last session was X days ago"
     case volume  // Fallback
 }
 
@@ -56,11 +57,18 @@ struct DeterministicInsightGenerator {
     // MARK: - Main Generation
 
     /// Generate all applicable insights for the given analysis result
+    /// - Parameters:
+    ///   - result: The analysis result to generate insights from
+    ///   - allSessions: All sessions (for cross-session analysis)
+    ///   - sessionTypes: Available session type configurations
+    ///   - temperatureUnit: User's preferred temperature unit
+    ///   - lastSessionDate: Optional date of most recent session (for inactivity insight when current period has 0 sessions)
     func generateInsights(
         from result: AnalysisResult,
         allSessions: [SessionWithStats],
         sessionTypes: [SessionTypeConfig],
-        temperatureUnit: TemperatureUnit = .fahrenheit
+        temperatureUnit: TemperatureUnit = .fahrenheit,
+        lastSessionDate: Date? = nil
     ) -> [DeterministicInsight] {
         var insights: [DeterministicInsight] = []
 
@@ -69,6 +77,14 @@ struct DeterministicInsightGenerator {
             sessionTypes: sessionTypes,
             temperatureUnit: temperatureUnit
         )
+
+        // Special case: zero sessions in current period but sessions exist elsewhere
+        if result.comparison.current.sessionCount == 0, let lastDate = lastSessionDate {
+            if let insight = inactivityInsight(lastSessionDate: lastDate, context: filterContext) {
+                insights.append(insight)
+            }
+            return insights
+        }
 
         // Try each insight category in priority order
         if let insight = recentComparisonInsight(from: result, context: filterContext) {
@@ -450,6 +466,22 @@ struct DeterministicInsightGenerator {
             category: .progression,
             text: text,
             icon: diff < 0 ? "chart.line.downtrend.xyaxis" : "chart.line.uptrend.xyaxis"
+        )
+    }
+
+    /// "Your last session was X days ago" - when zero sessions in period but sessions exist
+    private func inactivityInsight(lastSessionDate: Date, context: FilterContext) -> DeterministicInsight? {
+        let calendar = Calendar.current
+        let days = calendar.dateComponents([.day], from: lastSessionDate, to: Date()).day ?? 0
+        guard days > 0 else { return nil }
+
+        let daysText = days == 1 ? "1 day" : "\(days) days"
+        let text = "Your last session was \(daysText) ago"
+
+        return DeterministicInsight(
+            category: .inactivity,
+            text: text,
+            icon: "clock.arrow.circlepath"
         )
     }
 

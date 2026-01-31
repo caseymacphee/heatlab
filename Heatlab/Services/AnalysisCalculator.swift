@@ -350,7 +350,18 @@ final class AnalysisCalculator {
         let trendPoints = calculateTrend(sessions: filtered, filters: effectiveFilters)
         
         // Create mapping from date to session for navigation
-        let sessionMap = Dictionary(uniqueKeysWithValues: filtered.map { ($0.session.startDate, $0) })
+        // Use reduce to handle duplicates by keeping the session with newest updatedAt
+        let sessionMap: [Date: SessionWithStats] = filtered.reduce(into: [:]) { map, session in
+            let key = session.session.startDate
+            if let existing = map[key] {
+                // Keep the one with newest updatedAt
+                if session.session.updatedAt > existing.session.updatedAt {
+                    map[key] = session
+                }
+            } else {
+                map[key] = session
+            }
+        }
 
         // Calculate acclimation (only meaningful when filtering by a specific temperature bucket)
         let acclimation: AcclimationSignal? = if let bucket = effectiveFilters.temperatureBucket {

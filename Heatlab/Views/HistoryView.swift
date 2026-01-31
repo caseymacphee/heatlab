@@ -77,9 +77,12 @@ struct HistoryView: View {
 
             Group {
                 if isLoading {
-                    Spacer()
-                    ProgressView("Loading sessions...")
-                    Spacer()
+                    VStack {
+                        Spacer()
+                        ProgressView("Loading sessions...")
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if sessions.isEmpty {
                     ContentUnavailableView {
                         Label("No Sessions Yet", systemImage: SFSymbol.mindAndBody)

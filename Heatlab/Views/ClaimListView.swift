@@ -39,9 +39,12 @@ struct ClaimListView: View {
             
             Group {
                 if isLoading {
-                    Spacer()
-                    ProgressView("Loading workouts...")
-                    Spacer()
+                    VStack {
+                        Spacer()
+                        ProgressView("Loading workouts...")
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let error = errorMessage {
                     ContentUnavailableView {
                         Label("Error", systemImage: "exclamationmark.triangle")
