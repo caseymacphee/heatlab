@@ -68,6 +68,25 @@ struct HeatLabInputStyle: ViewModifier {
     }
 }
 
+/// Tooltip overlay style for chart callouts and inspection popups
+struct HeatLabTooltipStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, watchOS 26, *) {
+            content
+                .padding(10)
+                .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: HeatLabRadius.sm))
+        } else {
+            content
+                .padding(10)
+                .background {
+                    RoundedRectangle(cornerRadius: HeatLabRadius.sm)
+                        .fill(.ultraThinMaterial)
+                        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+                }
+        }
+    }
+}
+
 // MARK: - View Extensions
 
 extension View {
@@ -89,5 +108,10 @@ extension View {
     /// Apply input field styling for edit mode (elevated with shadow)
     func heatLabInput() -> some View {
         modifier(HeatLabInputStyle())
+    }
+
+    /// Apply tooltip styling for chart callouts (liquid glass on iOS 26+, material fallback)
+    func heatLabTooltip() -> some View {
+        modifier(HeatLabTooltipStyle())
     }
 }

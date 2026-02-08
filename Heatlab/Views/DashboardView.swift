@@ -227,6 +227,19 @@ struct DashboardView: View {
                             StatsGrid(comparison: comparison, trendPoints: [])
                         }
                         .heatLabCard()
+
+                        // Recent Sessions (empty state)
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Recent Sessions")
+                                .font(.headline)
+
+                            Text("No sessions in the past 7 days")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.vertical, 8)
+                        }
+                        .heatLabCard()
                     }
                     .padding()
                 }

@@ -48,6 +48,7 @@ struct heatlabApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .tint(.hlAccent)
                 .environment(userSettings)
                 .environment(cloudKitStatus)
                 .environment(subscriptionManager)

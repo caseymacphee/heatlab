@@ -248,7 +248,7 @@ struct AnalysisView: View {
             if result.trendPoints.isEmpty {
                 ContentUnavailableView(
                     "No Data for Period",
-                    systemImage: "chart.line.downtrend.xyaxis",
+                    systemImage: SFSymbol.mindAndBody,
                     description: Text("Complete sessions \(periodDescription) to see trends")
                 )
                 .frame(height: 200)
@@ -786,13 +786,8 @@ private struct ChartCalloutView: View {
                     .lineLimit(1)
             }
         }
-        .padding(10)
         .frame(width: 180)
-        .background {
-            RoundedRectangle(cornerRadius: HeatLabRadius.sm)
-                .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
-        }
+        .heatLabTooltip()
     }
     
     private var formattedDuration: String {

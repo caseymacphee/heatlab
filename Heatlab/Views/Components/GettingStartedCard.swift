@@ -116,27 +116,34 @@ struct WatchInstructionsSheet: View {
         NavigationStack {
             VStack(spacing: 32) {
                 Spacer()
-                
-                // App icon or wave
-                Image("HeatLabWaveOnly")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 80, height: 80)
-                    .foregroundStyle(Color.hlAccent)
-                
+
                 VStack(spacing: 24) {
+                    // Tip: class type setup
+                    HStack(spacing: 12) {
+                        Image(systemName: "gearshape")
+                            .font(.body)
+                            .foregroundStyle(Color.hlAccent)
+
+                        Text("**Tip:** Go to **Settings** to add or remove class types — they'll appear on your watch when starting a session.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(12)
+                    .background(Color.hlAccent.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+
                     InstructionRow(
                         number: 1,
                         title: "Open HeatLab on Apple Watch",
                         subtitle: "Find the app in your watch's app grid"
                     )
-                    
+
                     InstructionRow(
                         number: 2,
                         title: "Tap \"Start Session\"",
                         subtitle: "Set your temperature and begin tracking"
                     )
-                    
+
                     InstructionRow(
                         number: 3,
                         title: "We'll sync automatically",
@@ -144,7 +151,7 @@ struct WatchInstructionsSheet: View {
                     )
                 }
                 .padding(.horizontal)
-                
+
                 Spacer()
                 
                 Button("Got it") {

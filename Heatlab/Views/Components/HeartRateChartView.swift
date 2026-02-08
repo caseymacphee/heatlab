@@ -10,15 +10,25 @@ import Charts
 
 struct HeartRateChartView: View {
     let dataPoints: [HeartRateDataPoint]
+    let duration: TimeInterval
     let minHR: Double
     let maxHR: Double
     let averageHR: Double
-    
+
+    @State private var selectedTimeInMinutes: Double?
+
+    private var selectedDataPoint: HeartRateDataPoint? {
+        guard let selectedTime = selectedTimeInMinutes else { return nil }
+        return dataPoints.min(by: {
+            abs($0.timeInMinutes - selectedTime) < abs($1.timeInMinutes - selectedTime)
+        })
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Heart Rate Over Time")
+            Text("Heart Rate")
                 .font(.headline)
-            
+
             if dataPoints.isEmpty {
                 ContentUnavailableView(
                     "No Heart Rate Data",
@@ -40,14 +50,59 @@ struct HeartRateChartView: View {
                         )
                     )
                     .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round))
-                    
+
                     // Add average HR reference line
                     RuleMark(y: .value("Average", averageHR))
                         .foregroundStyle(.orange)
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+
+                    // Crosshair at selected point
+                    if let selected = selectedDataPoint {
+                        RuleMark(x: .value("Selected", selected.timeInMinutes))
+                            .foregroundStyle(.white.opacity(0.6))
+                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+
+                        RuleMark(y: .value("Selected HR", selected.heartRate))
+                            .foregroundStyle(.white.opacity(0.6))
+                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+
+                        PointMark(
+                            x: .value("Selected Time", selected.timeInMinutes),
+                            y: .value("Selected HR", selected.heartRate)
+                        )
+                        .symbolSize(40)
+                        .foregroundStyle(.white)
+                    }
+                }
+                .chartXSelection(value: $selectedTimeInMinutes)
+                .chartOverlay { proxy in
+                    GeometryReader { geo in
+                        if let selected = selectedDataPoint,
+                           let xPos = proxy.position(forX: selected.timeInMinutes),
+                           let yPos = proxy.position(forY: selected.heartRate) {
+                            let plotArea = geo[proxy.plotFrame!]
+                            let pointX = plotArea.origin.x + xPos
+                            let pointY = plotArea.origin.y + yPos
+
+                            VStack(spacing: 2) {
+                                Text("\(Int(selected.heartRate)) bpm")
+                                    .font(.caption.bold())
+                                Text(formatTimeLabel(selected.timeInMinutes))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .heatLabTooltip()
+                            .position(tooltipPosition(
+                                pointX: pointX,
+                                pointY: pointY,
+                                in: geo.size
+                            ))
+                        }
+                    }
+                    .allowsHitTesting(false)
                 }
                 .chartXAxis {
-                    AxisMarks(values: .automatic) { value in
+                    AxisMarks(values: xAxisTicks(durationMinutes: duration / 60.0)) { value in
                         AxisGridLine()
                         AxisValueLabel {
                             if let minutes = value.as(Double.self) {
@@ -58,7 +113,7 @@ struct HeartRateChartView: View {
                     }
                 }
                 .chartYAxis {
-                    AxisMarks(values: .automatic) { value in
+                    AxisMarks(position: .leading, values: .automatic) { value in
                         AxisGridLine()
                         AxisValueLabel {
                             if let bpm = value.as(Double.self) {
@@ -68,9 +123,9 @@ struct HeartRateChartView: View {
                         }
                     }
                 }
+                .chartXScale(domain: 0...(duration / 60.0))
                 .chartYScale(domain: yAxisDomain)
-                .chartYAxisLabel("Heart Rate (bpm)", position: .leading)
-                .chartXAxisLabel("Time (minutes)", position: .bottom)
+                .chartPlotStyle { $0.clipped() }
                 .frame(height: 220)
                 
                 // Legend for average line
@@ -113,13 +168,53 @@ struct HeartRateChartView: View {
         return minValue...maxValue
     }
     
+    private func tooltipPosition(pointX: CGFloat, pointY: CGFloat, in size: CGSize) -> CGPoint {
+        let tooltipWidth: CGFloat = 100
+        let tooltipHeight: CGFloat = 50
+        let offset: CGFloat = 12
+
+        // Position above the point by default
+        var x = pointX
+        var y = pointY - tooltipHeight / 2 - offset
+
+        // If too close to the top, position below
+        if y - tooltipHeight / 2 < 0 {
+            y = pointY + tooltipHeight / 2 + offset
+        }
+
+        // Clamp horizontally
+        x = max(tooltipWidth / 2, min(x, size.width - tooltipWidth / 2))
+
+        return CGPoint(x: x, y: y)
+    }
+
+    private func xAxisTicks(durationMinutes: Double) -> [Double] {
+        let interval: Double
+        if durationMinutes <= 5 { interval = 1 }
+        else if durationMinutes <= 15 { interval = 5 }
+        else if durationMinutes <= 60 { interval = 10 }
+        else { interval = 30 }
+
+        var values: [Double] = []
+        var t = 0.0
+        while t < durationMinutes {
+            values.append(t)
+            t += interval
+        }
+        values.append(durationMinutes)
+        return values
+    }
+
     private func formatTimeLabel(_ minutes: Double) -> String {
-        let totalMinutes = Int(minutes)
-        let hours = totalMinutes / 60
-        let mins = totalMinutes % 60
-        
+        let totalSeconds = Int((minutes * 60).rounded())
+        let hours = totalSeconds / 3600
+        let mins = (totalSeconds % 3600) / 60
+        let secs = totalSeconds % 60
+
         if hours > 0 {
             return "\(hours):\(String(format: "%02d", mins))"
+        } else if secs > 0 {
+            return "\(mins):\(String(format: "%02d", secs))"
         } else {
             return "\(mins)m"
         }
@@ -136,6 +231,7 @@ struct HeartRateChartView: View {
     
     return HeartRateChartView(
         dataPoints: sampleData,
+        duration: 1800,
         minHR: 100,
         maxHR: 160,
         averageHR: 140

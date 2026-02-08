@@ -89,8 +89,8 @@ struct InsightPreviewCard: View {
                     }
                 }
 
-                if let result = result, result.comparison.current.sessionCount > 0 {
-                    // Primary insight text
+                if let result = result, (result.comparison.current.sessionCount > 0 || !availableInsights.isEmpty) {
+                    // Primary insight text (includes inactivity insight when sessionCount == 0)
                     Text(displayText(from: result))
                         .font(.subheadline)
                         .foregroundStyle(.primary)

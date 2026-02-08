@@ -26,7 +26,15 @@ struct ClaimDetailView: View {
     @State private var notes: String = ""
     @State private var hapticGenerator: UIImpactFeedbackGenerator?
     
-    // Loading state
+    // Initial state (captured after onAppear defaults)
+    @State private var initialIsHeated: Bool = true
+    @State private var initialTemperature: Int = 95
+    @State private var initialSessionTypeId: UUID? = nil
+    @State private var initialPerceivedEffort: PerceivedEffort = .none
+    @State private var initialNotes: String = ""
+
+    // UI state
+    @State private var showingDiscardConfirmation = false
     @State private var isSaving = false
     @State private var heartRateData: [HKQuantitySample] = []
     @State private var isLoadingHR = false
@@ -80,37 +88,71 @@ struct ClaimDetailView: View {
                 sessionTypeSection
                 perceivedEffortSection
                 notesSection
-                
-                // Save Button
-                saveButton
             }
             .padding()
         }
         .background(Color.hlBackground)
         .navigationTitle("Claim Workout")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(isSaving || hasModifications)
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
-                    dismiss()
+            if hasModifications && !isSaving {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        showingDiscardConfirmation = true
+                    } label: {
+                        Image(systemName: "chevron.left")
+                    }
                 }
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Save") {
+                    saveWorkout()
+                }
+                .disabled(isSaving)
             }
         }
         .onAppear {
             hapticGenerator = UIImpactFeedbackGenerator(style: .light)
             hapticGenerator?.prepare()
-            
+
             // Set default session type from matching types (same workout type)
             if let defaultType = matchingSessionTypes.first {
                 sessionTypeId = defaultType.id
             }
+
+            // Snapshot initial values for modification detection
+            initialIsHeated = isHeated
+            initialTemperature = temperature
+            initialSessionTypeId = sessionTypeId
+            initialPerceivedEffort = perceivedEffort
+            initialNotes = notes
         }
         .task {
             await loadHeartRateData()
         }
-        .interactiveDismissDisabled(isSaving)
+        .alert("Unsaved Changes", isPresented: $showingDiscardConfirmation) {
+            Button("Save", role: nil) {
+                saveWorkout()
+            }
+            Button("Discard", role: .destructive) {
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("You have unsaved changes. Would you like to save or discard them?")
+        }
     }
     
+    private var hasModifications: Bool {
+        if isHeated != initialIsHeated { return true }
+        if isHeated && temperature != initialTemperature { return true }
+        if sessionTypeId != initialSessionTypeId { return true }
+        if perceivedEffort != initialPerceivedEffort { return true }
+        if notes != initialNotes { return true }
+        return false
+    }
+
     // MARK: - Sections
     
     @ViewBuilder
@@ -311,31 +353,6 @@ struct ClaimDetailView: View {
                     .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
             )
         }
-    }
-    
-    @ViewBuilder
-    private var saveButton: some View {
-        Button {
-            saveWorkout()
-        } label: {
-            HStack {
-                if isSaving {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                        .tint(.white)
-                } else {
-                    Image(systemName: SFSymbol.checkmark)
-                }
-                Text(isSaving ? "Saving..." : "Save Session")
-            }
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(Color.hlAccent)
-            .foregroundStyle(.white)
-            .clipShape(RoundedRectangle(cornerRadius: HLRadius.card))
-        }
-        .disabled(isSaving)
-        .padding(.top, 8)
     }
     
     // MARK: - Actions
