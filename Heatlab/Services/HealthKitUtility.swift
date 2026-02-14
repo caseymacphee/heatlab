@@ -56,6 +56,37 @@ enum HealthKitUtility {
         )
     }
 
+    /// Fetches the user's age from HealthKit dateOfBirth
+    /// Returns nil if not available or on error
+    static func fetchDateOfBirth(healthStore: HKHealthStore) -> Int? {
+        do {
+            let components = try healthStore.dateOfBirthComponents()
+            guard let year = components.year else { return nil }
+
+            let calendar = Calendar.current
+            let now = Date()
+            let today = calendar.dateComponents([.year, .month, .day], from: now)
+
+            guard let currentYear = today.year else { return nil }
+            var age = currentYear - year
+
+            // Adjust if birthday hasn't occurred yet this year
+            if let birthMonth = components.month, let currentMonth = today.month {
+                if birthMonth > currentMonth {
+                    age -= 1
+                } else if birthMonth == currentMonth, let birthDay = components.day, let currentDay = today.day {
+                    if birthDay > currentDay {
+                        age -= 1
+                    }
+                }
+            }
+
+            return age > 0 ? age : nil
+        } catch {
+            return nil
+        }
+    }
+
     /// Computes average heart rate from samples
     static func computeAverageHeartRate(samples: [HKQuantitySample]) -> Double {
         guard !samples.isEmpty else { return 0 }

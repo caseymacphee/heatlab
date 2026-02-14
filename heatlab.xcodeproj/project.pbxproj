@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3C14822C2F40D9D100E32A4F /* HeartRateZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C14822B2F40D9D100E32A4F /* HeartRateZone.swift */; };
+		3C14822D2F40D9D100E32A4F /* HeartRateZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C14822B2F40D9D100E32A4F /* HeartRateZone.swift */; };
 		3C766A4D2F1400F100309D3D /* HeatLabWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 3C766A2D2F1400EF00309D3D /* HeatLabWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		3C766B0D2F1520F400309D3D /* WorkoutSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B052F1520F400309D3D /* WorkoutSession.swift */; };
 		3C766B0E2F1520F400309D3D /* UserSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C766B0B2F1520F400309D3D /* UserSettings.swift */; };
@@ -90,6 +92,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		3C14822B2F40D9D100E32A4F /* HeartRateZone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateZone.swift; sourceTree = "<group>"; };
 		3C7669FA2F14000900309D3D /* HeatLab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HeatLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C766A0B2F14000B00309D3D /* HeatlabTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HeatlabTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C766A152F14000B00309D3D /* HeatlabUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HeatlabUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -257,6 +260,7 @@
 		3C766B0C2F1520F400309D3D /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				3C14822B2F40D9D100E32A4F /* HeartRateZone.swift */,
 				3C766B082F1520F400309D3D /* Models */,
 				3C769C032F1F000000309D3D /* Theme */,
 				3C769D032F1F000100309D3D /* Services */,
@@ -545,6 +549,7 @@
 				3C766B102F1520F400309D3D /* SessionStats.swift in Sources */,
 				3C769D052F1F000200309D3D /* SubscriptionStatus.swift in Sources */,
 				3C766B112F1520F400309D3D /* Temperature.swift in Sources */,
+				3C14822D2F40D9D100E32A4F /* HeartRateZone.swift in Sources */,
 				3C766B122F1520F400309D3D /* HeatLabModelContainer.swift in Sources */,
 				3C766B1A2F1520F400309D3D /* CloudKitStatus.swift in Sources */,
 				3C769C042F1F000000309D3D /* HeatLabTheme.swift in Sources */,
@@ -578,6 +583,7 @@
 				3C769D062F1F000200309D3D /* SubscriptionStatus.swift in Sources */,
 				3C766B172F1520F400309D3D /* Temperature.swift in Sources */,
 				3C76993C2F1A9446000FAEAD /* SessionTypeConfig.swift in Sources */,
+				3C14822C2F40D9D100E32A4F /* HeartRateZone.swift in Sources */,
 				3C766B182F1520F400309D3D /* HeatLabModelContainer.swift in Sources */,
 				3C766B1B2F1520F400309D3D /* CloudKitStatus.swift in Sources */,
 				3C769C062F1F000000309D3D /* HeatLabTheme.swift in Sources */,

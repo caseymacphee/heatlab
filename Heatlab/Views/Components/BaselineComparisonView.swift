@@ -44,7 +44,7 @@ struct BaselineComparisonView: View {
         BaselineComparisonView(comparison: .typical(bucket: .veryHot))
         BaselineComparisonView(comparison: .higherEffort(percentAbove: 12, bucket: .veryHot))
         BaselineComparisonView(comparison: .lowerEffort(percentBelow: 8, bucket: .hot))
-        BaselineComparisonView(comparison: .insufficientData(sessionsNeeded: 2, bucket: .extreme))
+        BaselineComparisonView(comparison: .insufficientData(sessionsNeeded: 2, bucket: .hottest))
         BaselineComparisonView(comparison: .typical(bucket: .unheated))
     }
     .padding()

@@ -14,6 +14,8 @@ struct HeartRateChartView: View {
     let minHR: Double
     let maxHR: Double
     let averageHR: Double
+    var zonedDataPoints: [ZonedHeartRateDataPoint]? = nil
+    var zoneMaxHR: Double? = nil
 
     @State private var selectedTimeInMinutes: Double?
 
@@ -22,6 +24,11 @@ struct HeartRateChartView: View {
         return dataPoints.min(by: {
             abs($0.timeInMinutes - selectedTime) < abs($1.timeInMinutes - selectedTime)
         })
+    }
+
+    /// Whether to render zone-colored lines instead of gradient
+    private var useZoneColoring: Bool {
+        zonedDataPoints != nil && zoneMaxHR != nil
     }
 
     var body: some View {
@@ -37,97 +44,61 @@ struct HeartRateChartView: View {
                 )
                 .frame(height: 200)
             } else {
-                Chart(dataPoints) { point in
-                    LineMark(
-                        x: .value("Time", point.timeInMinutes),
-                        y: .value("Heart Rate", point.heartRate)
-                    )
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color.HeatLab.tempHot, Color.HeatLab.tempVeryHot],
-                            startPoint: .bottom,
-                            endPoint: .top
-                        )
-                    )
-                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round))
+                chartContent
+                    .chartXSelection(value: $selectedTimeInMinutes)
+                    .chartOverlay { proxy in
+                        GeometryReader { geo in
+                            if let selected = selectedDataPoint,
+                               let xPos = proxy.position(forX: selected.timeInMinutes),
+                               let yPos = proxy.position(forY: selected.heartRate) {
+                                let plotArea = geo[proxy.plotFrame!]
+                                let pointX = plotArea.origin.x + xPos
+                                let pointY = plotArea.origin.y + yPos
 
-                    // Add average HR reference line
-                    RuleMark(y: .value("Average", averageHR))
-                        .foregroundStyle(.orange)
-                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
-
-                    // Crosshair at selected point
-                    if let selected = selectedDataPoint {
-                        RuleMark(x: .value("Selected", selected.timeInMinutes))
-                            .foregroundStyle(.white.opacity(0.6))
-                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
-
-                        RuleMark(y: .value("Selected HR", selected.heartRate))
-                            .foregroundStyle(.white.opacity(0.6))
-                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
-
-                        PointMark(
-                            x: .value("Selected Time", selected.timeInMinutes),
-                            y: .value("Selected HR", selected.heartRate)
-                        )
-                        .symbolSize(40)
-                        .foregroundStyle(.white)
-                    }
-                }
-                .chartXSelection(value: $selectedTimeInMinutes)
-                .chartOverlay { proxy in
-                    GeometryReader { geo in
-                        if let selected = selectedDataPoint,
-                           let xPos = proxy.position(forX: selected.timeInMinutes),
-                           let yPos = proxy.position(forY: selected.heartRate) {
-                            let plotArea = geo[proxy.plotFrame!]
-                            let pointX = plotArea.origin.x + xPos
-                            let pointY = plotArea.origin.y + yPos
-
-                            VStack(spacing: 2) {
-                                Text("\(Int(selected.heartRate)) bpm")
-                                    .font(.caption.bold())
-                                Text(formatTimeLabel(selected.timeInMinutes))
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                VStack(spacing: 2) {
+                                    Text("\(Int(selected.heartRate)) bpm")
+                                        .font(.caption.bold())
+                                    Text(formatTimeLabel(selected.timeInMinutes))
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .heatLabTooltip()
+                                .position(tooltipPosition(
+                                    pointX: pointX,
+                                    pointY: pointY,
+                                    in: geo.size
+                                ))
                             }
-                            .heatLabTooltip()
-                            .position(tooltipPosition(
-                                pointX: pointX,
-                                pointY: pointY,
-                                in: geo.size
-                            ))
                         }
+                        .allowsHitTesting(false)
                     }
-                    .allowsHitTesting(false)
-                }
-                .chartXAxis {
-                    AxisMarks(values: xAxisTicks(durationMinutes: duration / 60.0)) { value in
-                        AxisGridLine()
-                        AxisValueLabel {
-                            if let minutes = value.as(Double.self) {
-                                Text(formatTimeLabel(minutes))
-                                    .font(.caption2)
+                    .chartXAxis {
+                        AxisMarks(values: xAxisTicks(durationMinutes: duration / 60.0)) { value in
+                            AxisGridLine()
+                            AxisValueLabel {
+                                if let minutes = value.as(Double.self) {
+                                    Text(formatTimeLabel(minutes))
+                                        .font(.caption2)
+                                }
                             }
                         }
                     }
-                }
-                .chartYAxis {
-                    AxisMarks(position: .leading, values: .automatic) { value in
-                        AxisGridLine()
-                        AxisValueLabel {
-                            if let bpm = value.as(Double.self) {
-                                Text("\(Int(bpm))")
-                                    .font(.caption2)
+                    .chartYAxis {
+                        AxisMarks(position: .leading, values: .automatic) { value in
+                            AxisGridLine()
+                            AxisValueLabel {
+                                if let bpm = value.as(Double.self) {
+                                    Text("\(Int(bpm))")
+                                        .font(.caption2)
+                                }
                             }
                         }
                     }
-                }
-                .chartXScale(domain: 0...(duration / 60.0))
-                .chartYScale(domain: yAxisDomain)
-                .chartPlotStyle { $0.clipped() }
-                .frame(height: 220)
-                
+                    .chartXScale(domain: 0...(duration / 60.0))
+                    .chartYScale(domain: yAxisDomain)
+                    .chartPlotStyle { $0.clipped() }
+                    .frame(height: 220)
+
                 // Legend for average line
                 HStack(spacing: 6) {
                     // Orange dashed line indicator
@@ -137,11 +108,11 @@ struct HeartRateChartView: View {
                     }
                     .stroke(Color.orange, style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
                     .frame(height: 1.5)
-                    
+
                     Text("Avg: \(Int(averageHR)) bpm")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    
+
                     Spacer()
                 }
                 .padding(.top, 4)
@@ -149,40 +120,163 @@ struct HeartRateChartView: View {
         }
         .heatLabCard()
     }
-    
+
+    // MARK: - Chart Content
+
+    @ViewBuilder
+    private var chartContent: some View {
+        if useZoneColoring, let zoned = zonedDataPoints {
+            zoneColoredChart(zoned: zoned)
+        } else {
+            gradientChart
+        }
+    }
+
+    private func zoneColoredChart(zoned: [ZonedHeartRateDataPoint]) -> some View {
+        let flatPoints = zoneRunFlatPoints(from: zoned)
+        return Chart(flatPoints, id: \.id) { point in
+            LineMark(
+                x: .value("Time", point.timeInMinutes),
+                y: .value("Heart Rate", point.heartRate),
+                series: .value("Run", point.runIDString)
+            )
+            .foregroundStyle(point.color)
+            .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round))
+        }
+        .chartBackground { _ in EmptyView() }
+        .chartOverlay { _ in EmptyView() }
+        .chartLegend(.hidden)
+        .overlay(zoneOverlayChart)
+    }
+
+    /// Overlay chart with just the average line and crosshair (avoids complex type-checking in one Chart)
+    private var zoneOverlayChart: some View {
+        Chart {
+            averageAndCrosshairMarks
+        }
+        .chartXScale(domain: 0...(duration / 60.0))
+        .chartYScale(domain: yAxisDomain)
+        .chartXAxis(.hidden)
+        .chartYAxis(.hidden)
+        .chartLegend(.hidden)
+        .allowsHitTesting(false)
+    }
+
+    private var gradientChart: some View {
+        Chart(dataPoints) { point in
+            LineMark(
+                x: .value("Time", point.timeInMinutes),
+                y: .value("Heart Rate", point.heartRate)
+            )
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [Color.HeatLab.tempHot, Color.HeatLab.tempVeryHot],
+                    startPoint: .bottom,
+                    endPoint: .top
+                )
+            )
+            .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round))
+        }
+        .overlay(zoneOverlayChart)
+    }
+
+    @ChartContentBuilder
+    private var averageAndCrosshairMarks: some ChartContent {
+        RuleMark(y: .value("Average", averageHR))
+            .foregroundStyle(.orange)
+            .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
+
+        if let selected = selectedDataPoint {
+            RuleMark(x: .value("Selected", selected.timeInMinutes))
+                .foregroundStyle(.white.opacity(0.6))
+                .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+
+            RuleMark(y: .value("Selected HR", selected.heartRate))
+                .foregroundStyle(.white.opacity(0.6))
+                .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+
+            PointMark(
+                x: .value("Selected Time", selected.timeInMinutes),
+                y: .value("Selected HR", selected.heartRate)
+            )
+            .symbolSize(40)
+            .foregroundStyle(.white)
+        }
+    }
+
+    // MARK: - Zone Runs
+
+    /// Flattens zone runs into a flat array of chart-ready points.
+    /// Each point carries its run ID and zone color for direct use in Chart.
+    private func zoneRunFlatPoints(from points: [ZonedHeartRateDataPoint]) -> [ZoneRunPoint] {
+        guard !points.isEmpty else { return [] }
+
+        let sorted = points.sorted { $0.timeOffset < $1.timeOffset }
+        var result: [ZoneRunPoint] = []
+        var currentZone = sorted[0].zone
+        var runID = UUID()
+
+        result.append(ZoneRunPoint(
+            heartRate: sorted[0].heartRate,
+            timeInMinutes: sorted[0].timeInMinutes,
+            runID: runID,
+            color: currentZone.color
+        ))
+
+        for i in 1..<sorted.count {
+            let pt = sorted[i]
+            if pt.zone != currentZone {
+                // Add boundary point to current run for line continuity
+                result.append(ZoneRunPoint(
+                    heartRate: pt.heartRate,
+                    timeInMinutes: pt.timeInMinutes,
+                    runID: runID,
+                    color: currentZone.color
+                ))
+                // Start new run
+                currentZone = pt.zone
+                runID = UUID()
+            }
+            result.append(ZoneRunPoint(
+                heartRate: pt.heartRate,
+                timeInMinutes: pt.timeInMinutes,
+                runID: runID,
+                color: currentZone.color
+            ))
+        }
+
+        return result
+    }
+
+    // MARK: - Helpers
+
     private var yAxisDomain: ClosedRange<Double> {
         guard !dataPoints.isEmpty else {
             return 60...180
         }
-        
-        // Calculate actual min/max from the data points themselves
-        // This ensures we capture all data points, even if they're below typical thresholds
+
         let actualMinHR = dataPoints.map { $0.heartRate }.min() ?? minHR
         let actualMaxHR = dataPoints.map { $0.heartRate }.max() ?? maxHR
-        
+
         let padding = 10.0
-        // Don't hardcode a minimum - use the actual minimum from data with padding
         let minValue = max(0, (actualMinHR - padding).rounded(.down))
         let maxValue = (actualMaxHR + padding).rounded(.up)
-        
+
         return minValue...maxValue
     }
-    
+
     private func tooltipPosition(pointX: CGFloat, pointY: CGFloat, in size: CGSize) -> CGPoint {
         let tooltipWidth: CGFloat = 100
         let tooltipHeight: CGFloat = 50
         let offset: CGFloat = 12
 
-        // Position above the point by default
         var x = pointX
         var y = pointY - tooltipHeight / 2 - offset
 
-        // If too close to the top, position below
         if y - tooltipHeight / 2 < 0 {
             y = pointY + tooltipHeight / 2 + offset
         }
 
-        // Clamp horizontally
         x = max(tooltipWidth / 2, min(x, size.width - tooltipWidth / 2))
 
         return CGPoint(x: x, y: y)
@@ -221,6 +315,17 @@ struct HeartRateChartView: View {
     }
 }
 
+// MARK: - Zone Run Point
+
+private struct ZoneRunPoint: Identifiable {
+    let id = UUID()
+    let heartRate: Double
+    let timeInMinutes: Double
+    let runID: UUID
+    let color: Color
+    var runIDString: String { runID.uuidString }
+}
+
 #Preview {
     let sampleData = (0..<30).map { index in
         HeartRateDataPoint(
@@ -228,7 +333,7 @@ struct HeartRateChartView: View {
             timeOffset: TimeInterval(index * 60)
         )
     }
-    
+
     return HeartRateChartView(
         dataPoints: sampleData,
         duration: 1800,

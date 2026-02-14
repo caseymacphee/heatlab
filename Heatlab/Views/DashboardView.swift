@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import HealthKit
 
 struct DashboardView: View {
     @Environment(\.modelContext) var modelContext
@@ -314,6 +315,13 @@ struct DashboardView: View {
 
         // Request HealthKit read authorization (no-op if already granted)
         try? await repo.requestHealthKitAuthorization()
+
+        // Auto-detect age from HealthKit if not already set
+        if settings.userAge == nil {
+            if let hkAge = HealthKitUtility.fetchDateOfBirth(healthStore: HKHealthStore()) {
+                settings.userAge = hkAge
+            }
+        }
 
         // Fetch total session count first (lightweight, no HealthKit) for empty vs zero state
         totalSessionCount = (try? repo.fetchTotalSessionCount()) ?? 0

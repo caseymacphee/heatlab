@@ -28,13 +28,21 @@ struct SessionWithStats: Identifiable, Hashable {
     let session: WorkoutSession
     let workout: HKWorkout?
     let stats: SessionStats
-    
+    let zoneDistribution: ZoneDistribution?
+
+    init(session: WorkoutSession, workout: HKWorkout?, stats: SessionStats, zoneDistribution: ZoneDistribution? = nil) {
+        self.session = session
+        self.workout = workout
+        self.stats = stats
+        self.zoneDistribution = zoneDistribution
+    }
+
     var id: UUID { session.id }
-    
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
-    
+
     static func == (lhs: SessionWithStats, rhs: SessionWithStats) -> Bool {
         lhs.id == rhs.id
     }

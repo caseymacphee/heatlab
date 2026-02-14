@@ -136,31 +136,35 @@ enum AppleIntelligenceChecker {
     
     /// Get detailed availability status
     static var status: AppleIntelligenceStatus {
-        // Check simulator first
-        if isSimulator {
-            return .simulator
+        // On simulator, delegate to the framework directly — simulator uses
+        // the host Mac's models when running on macOS 26+ with Apple Intelligence enabled
+        #if targetEnvironment(simulator)
+        if SystemLanguageModel.default.isAvailable {
+            return .available
         }
-        
+        return .simulator
+        #else
         // Check hardware support
         if !hasRequiredHardware {
             return .hardwareNotSupported
         }
-        
+
         // Check OS version
         if !hasRequiredOSVersion {
             return .needsOSUpdate
         }
-        
+
         // Final check: is the model actually available?
         // This catches edge cases like user having AI disabled in settings
         if SystemLanguageModel.default.isAvailable {
             return .available
         }
-        
+
         // If we get here, hardware and OS are good but AI still not available
         // This could be due to user settings, region, or other factors
         // Treat as needs OS update since that's the most actionable
         return .needsOSUpdate
+        #endif
     }
 }
 
@@ -186,16 +190,19 @@ final class AnalysisInsightGenerator {
     @MainActor
     func generateInsight(
         for result: AnalysisResult,
+        allSessions: [SessionWithStats],
         temperatureName: String?,
         classTypeName: String?,
+        temperatureBaselines: [UserBaseline],
+        sessionTypeBaselines: [SessionTypeBaseline],
+        sessionTypes: [SessionTypeConfig],
+        userAge: Int?,
         temperatureUnit: TemperatureUnit = .fahrenheit
     ) async throws -> String {
-        // Check availability first
         guard Self.isAvailable else {
             throw AnalysisInsightError.aiNotAvailable
         }
 
-        // Create a new session if needed
         if session == nil {
             session = LanguageModelSession()
         }
@@ -204,100 +211,47 @@ final class AnalysisInsightGenerator {
             throw AnalysisInsightError.sessionUnavailable
         }
 
-        let prompt = buildPrompt(
+        // Compute structured signals
+        let signals = InsightSignalComputer.compute(
             result: result,
-            temperatureName: temperatureName,
-            classTypeName: classTypeName,
+            allSessions: allSessions,
+            temperatureBaselines: temperatureBaselines,
+            sessionTypeBaselines: sessionTypeBaselines,
+            sessionTypes: sessionTypes,
+            userAge: userAge,
             temperatureUnit: temperatureUnit
         )
-        
-        let response = try await session.respond(to: prompt)
-        return response.content
-    }
-    
-    private func buildPrompt(
-        result: AnalysisResult,
-        temperatureName: String?,
-        classTypeName: String?,
-        temperatureUnit: TemperatureUnit
-    ) -> String {
-        let current = result.comparison.current
-        let previous = result.comparison.previous
-        let period = result.filters.period
 
-        // Build filter context
+        let jsonData = try JSONEncoder().encode(signals)
+        let jsonString = String(data: jsonData, encoding: .utf8) ?? "{}"
+
         var filterContext = ""
-        if let temp = temperatureName {
-            filterContext += "Temperature range: \(temp)\n"
-        }
-        if let classType = classTypeName {
-            filterContext += "Class type: \(classType)\n"
-        }
-        if filterContext.isEmpty {
-            filterContext = "All sessions (no filters)\n"
-        }
+        if let temp = temperatureName { filterContext += "Temperature filter: \(temp)\n" }
+        if let classType = classTypeName { filterContext += "Class type filter: \(classType)\n" }
 
-        // Format temperature in user's preferred unit
-        let formattedAvgTemp = current.avgTemperature > 0
-            ? Temperature(fahrenheit: Int(current.avgTemperature)).formatted(unit: temperatureUnit)
-            : "N/A"
+        let prompt = """
+        Analyze this heat training data and provide a 2-3 sentence insight.
 
-        // Build current period stats
-        let currentStats = """
-        \(period.currentLabel):
-        - Sessions: \(current.sessionCount)
-        - Total Duration: \(Int(current.totalDuration / 60)) minutes
-        - Average Heart Rate: \(current.avgHeartRate > 0 ? "\(Int(current.avgHeartRate)) bpm" : "N/A")
-        - Total Calories: \(current.totalCalories > 0 ? "\(Int(current.totalCalories))" : "N/A")
-        - Average Temperature: \(formattedAvgTemp)
-        """
-        
-        // Build previous period stats if available
-        var previousStats = ""
-        if let prev = previous, prev.sessionCount > 0 {
-            previousStats = """
-            
-            \(period.previousLabel):
-            - Sessions: \(prev.sessionCount)
-            - Total Duration: \(Int(prev.totalDuration / 60)) minutes
-            - Average Heart Rate: \(prev.avgHeartRate > 0 ? "\(Int(prev.avgHeartRate)) bpm" : "N/A")
-            - Total Calories: \(prev.totalCalories > 0 ? "\(Int(prev.totalCalories))" : "N/A")
-            
-            Changes:
-            - Session count: \(result.comparison.sessionCountDelta.map { $0 > 0 ? "+\($0)" : "\($0)" } ?? "N/A")
-            - Avg HR change: \(result.comparison.avgHRDelta.map { String(format: "%.1f%%", $0) } ?? "N/A")
-            - Duration change: \(result.comparison.durationDelta.map { String(format: "%.1f%%", $0) } ?? "N/A")
-            """
-        }
-        
-        // Build acclimation context if available
-        var acclimationContext = ""
-        if let acclimation = result.acclimation {
-            let direction = acclimation.direction == .improving ? "improving" : "stable"
-            acclimationContext = """
-            
-            Heat Acclimation Status:
-            - Direction: \(direction)
-            - HR change from first sessions: \(String(format: "%.1f%%", acclimation.percentChange))
-            - Total sessions analyzed: \(acclimation.sessionCount)
-            """
-        }
-        
-        return """
-        Generate a brief, insightful 2-3 sentence analysis of this user's heated practice data.
-        
         \(filterContext)
-        \(currentStats)\(previousStats)\(acclimationContext)
-        
+        DATA (JSON):
+        \(jsonString)
+
+        Questions to consider:
+        - What's the most surprising thing about this data?
+        - What pattern here is most significant for heat adaptation?
+        - If this pattern continues, what would you predict?
+        \(signals.zones != nil ? "- How has Zone 4+5 time changed? What does this suggest about heat adaptation?" : "")
+
         Guidelines:
-        - Focus on meaningful patterns: improvement, consistency, or areas of opportunity
-        - If comparing periods, highlight the most significant change
-        - If acclimation data shows improvement, mention heat adaptation progress
-        - Lower average heart rate at the same temperature indicates better heat tolerance
-        - Be encouraging but grounded in the data - avoid generic praise
-        - If there's insufficient data for comparison, acknowledge what they've accomplished so far
+        - Reference specific numbers (HR values, dates, percentages) from the data
+        - Lower HR at the same temperature = better heat tolerance
+        - Focus on the single most meaningful pattern
+        - Be encouraging but grounded — no generic praise
         - Keep it conversational and actionable
         """
+
+        let response = try await session.respond(to: prompt)
+        return response.content
     }
 }
 
@@ -385,14 +339,15 @@ extension AnalysisInsightGenerator {
         result: AnalysisResult,
         allSessions: [SessionWithStats],
         sessionTypes: [SessionTypeConfig],
+        temperatureBaselines: [UserBaseline] = [],
+        sessionTypeBaselines: [SessionTypeBaseline] = [],
+        userAge: Int? = nil,
         temperatureUnit: TemperatureUnit
     ) async throws -> String {
-        // Check availability first
         guard Self.isAvailable else {
             throw AnalysisInsightError.aiNotAvailable
         }
 
-        // Create a new session if needed
         if session == nil {
             session = LanguageModelSession()
         }
@@ -401,13 +356,29 @@ extension AnalysisInsightGenerator {
             throw AnalysisInsightError.sessionUnavailable
         }
 
-        // Build category-specific prompt
+        // Compute structured signals
+        let signals = InsightSignalComputer.compute(
+            result: result,
+            allSessions: allSessions,
+            temperatureBaselines: temperatureBaselines,
+            sessionTypeBaselines: sessionTypeBaselines,
+            sessionTypes: sessionTypes,
+            userAge: userAge,
+            temperatureUnit: temperatureUnit
+        )
+
+        let jsonData = try JSONEncoder().encode(signals)
+        let jsonString = String(data: jsonData, encoding: .utf8) ?? "{}"
+
+        // Build category-specific prompt using JSON data
         let prompt = buildCategoryPrompt(
             category: category,
             result: result,
             allSessions: allSessions,
             sessionTypes: sessionTypes,
-            temperatureUnit: temperatureUnit
+            temperatureUnit: temperatureUnit,
+            jsonData: jsonString,
+            hasZones: signals.zones != nil
         )
 
         guard let prompt = prompt else {
@@ -423,7 +394,9 @@ extension AnalysisInsightGenerator {
         result: AnalysisResult,
         allSessions: [SessionWithStats],
         sessionTypes: [SessionTypeConfig],
-        temperatureUnit: TemperatureUnit
+        temperatureUnit: TemperatureUnit,
+        jsonData: String,
+        hasZones: Bool
     ) -> String? {
         switch category {
         case .recentComparison:

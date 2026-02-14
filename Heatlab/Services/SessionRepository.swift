@@ -55,7 +55,8 @@ final class SessionRepository {
         let typesToRead: Set<HKObjectType> = [
             .workoutType(),
             HKQuantityType(.heartRate),
-            HKQuantityType(.activeEnergyBurned)
+            HKQuantityType(.activeEnergyBurned),
+            HKCharacteristicType(.dateOfBirth)
         ]
         try await healthStore.requestAuthorization(toShare: [], read: typesToRead)
     }
@@ -95,8 +96,9 @@ final class SessionRepository {
     /// - Parameters:
     ///   - startDate: Only fetch sessions on or after this date (nil = fetch all)
     ///   - endDate: Only fetch sessions before this date (defaults to now)
+    ///   - maxHR: Optional max heart rate for zone calculation (from user age)
     /// - Returns: Array of sessions enriched with HealthKit stats
-    func fetchSessionsWithStats(from startDate: Date?, to endDate: Date = Date()) async throws -> [SessionWithStats] {
+    func fetchSessionsWithStats(from startDate: Date?, to endDate: Date = Date(), maxHR: Double? = nil) async throws -> [SessionWithStats] {
         // Fetch all non-deleted sessions, then filter by date in Swift
         // (Swift Predicates can't capture local Date variables)
         let descriptor = FetchDescriptor<WorkoutSession>(
@@ -123,7 +125,8 @@ final class SessionRepository {
             let workout = try await fetchWorkout(uuid: workoutUUID)
             let hrSamples = try await fetchHeartRateSamples(for: workout)
             let stats = computeStats(hrSamples: hrSamples, workout: workout, session: session)
-            results.append(SessionWithStats(session: session, workout: workout, stats: stats))
+            let zoneDistribution = computeZoneDistribution(hrSamples: hrSamples, session: session, stats: stats, maxHR: maxHR)
+            results.append(SessionWithStats(session: session, workout: workout, stats: stats, zoneDistribution: zoneDistribution))
         }
         return results
     }
@@ -147,7 +150,7 @@ final class SessionRepository {
     }
     
     /// Fetch all sessions without tier filtering (internal use)
-    func fetchAllSessionsWithStats() async throws -> [SessionWithStats] {
+    func fetchAllSessionsWithStats(maxHR: Double? = nil) async throws -> [SessionWithStats] {
         // 1. Fetch WorkoutSession metadata from SwiftData (exclude soft-deleted)
         let descriptor = FetchDescriptor<WorkoutSession>(
             predicate: #Predicate<WorkoutSession> { session in
@@ -156,7 +159,7 @@ final class SessionRepository {
             sortBy: [SortDescriptor(\.startDate, order: .reverse)]
         )
         let sessions = try modelContext.fetch(descriptor)
-        
+
         // 2. For each session, fetch corresponding HKWorkout and HR samples
         var results: [SessionWithStats] = []
         for session in sessions {
@@ -167,26 +170,28 @@ final class SessionRepository {
             let workout = try await fetchWorkout(uuid: workoutUUID)
             let hrSamples = try await fetchHeartRateSamples(for: workout)
             let stats = computeStats(hrSamples: hrSamples, workout: workout, session: session)
-            results.append(SessionWithStats(session: session, workout: workout, stats: stats))
+            let zoneDistribution = computeZoneDistribution(hrSamples: hrSamples, session: session, stats: stats, maxHR: maxHR)
+            results.append(SessionWithStats(session: session, workout: workout, stats: stats, zoneDistribution: zoneDistribution))
         }
         return results
     }
     
-    func fetchSession(id: UUID) async throws -> SessionWithStats? {
+    func fetchSession(id: UUID, maxHR: Double? = nil) async throws -> SessionWithStats? {
         let predicate = #Predicate<WorkoutSession> { session in
             session.id == id && session.deletedAt == nil
         }
         let descriptor = FetchDescriptor<WorkoutSession>(predicate: predicate)
-        
+
         guard let session = try modelContext.fetch(descriptor).first,
               let workoutUUID = session.workoutUUID else {
             return nil
         }
-        
+
         let workout = try await fetchWorkout(uuid: workoutUUID)
         let hrSamples = try await fetchHeartRateSamples(for: workout)
         let stats = computeStats(hrSamples: hrSamples, workout: workout, session: session)
-        return SessionWithStats(session: session, workout: workout, stats: stats)
+        let zoneDistribution = computeZoneDistribution(hrSamples: hrSamples, session: session, stats: stats, maxHR: maxHR)
+        return SessionWithStats(session: session, workout: workout, stats: stats, zoneDistribution: zoneDistribution)
     }
     
     /// Fetches heart rate samples for a specific session
@@ -233,6 +238,30 @@ final class SessionRepository {
         return try await HealthKitUtility.fetchHeartRateSamples(healthStore: healthStore, for: workout)
     }
     
+    private func computeZoneDistribution(
+        hrSamples: [HKQuantitySample],
+        session: WorkoutSession,
+        stats: SessionStats,
+        maxHR: Double?
+    ) -> ZoneDistribution? {
+        guard let maxHR = maxHR, maxHR > 0, !hrSamples.isEmpty else { return nil }
+
+        let hrUnit = HKUnit.count().unitDivided(by: .minute())
+        let sessionStartDate = session.startDate
+        let duration = session.manualDurationOverride ?? stats.duration
+
+        // Convert HK samples to HeartRateDataPoints, filtering to duration
+        let dataPoints = hrSamples.compactMap { sample -> HeartRateDataPoint? in
+            let hrValue = sample.quantity.doubleValue(for: hrUnit)
+            let timeOffset = sample.startDate.timeIntervalSince(sessionStartDate)
+            guard timeOffset <= duration else { return nil }
+            return HeartRateDataPoint(heartRate: hrValue, timeOffset: timeOffset)
+        }
+
+        guard !dataPoints.isEmpty else { return nil }
+        return ZoneCalculator.computeDistribution(hrSamples: dataPoints, maxHR: maxHR, sessionDuration: duration)
+    }
+
     private func computeStats(hrSamples: [HKQuantitySample], workout: HKWorkout?, session: WorkoutSession) -> SessionStats {
         let hrUnit = HKUnit.count().unitDivided(by: .minute())
         let hrValues = hrSamples.map { $0.quantity.doubleValue(for: hrUnit) }

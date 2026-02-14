@@ -50,9 +50,9 @@ final class BaselineEngineTests: XCTestCase {
     }
     
     func testTemperatureBucketExtreme() {
-        XCTAssertEqual(TemperatureBucket.from(temperature: 105), .extreme)
-        XCTAssertEqual(TemperatureBucket.from(temperature: 110), .extreme)
-        XCTAssertEqual(TemperatureBucket.from(temperature: 115), .extreme)
+        XCTAssertEqual(TemperatureBucket.from(temperature: 105), .hottest)
+        XCTAssertEqual(TemperatureBucket.from(temperature: 110), .hottest)
+        XCTAssertEqual(TemperatureBucket.from(temperature: 115), .hottest)
     }
     
     func testTemperatureBucketUnheated() {

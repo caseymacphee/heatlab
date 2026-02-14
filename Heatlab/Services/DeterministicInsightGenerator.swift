@@ -20,6 +20,8 @@ enum InsightCategory: String, CaseIterable {
     case acclimation
     case progression
     case inactivity  // "Your last session was X days ago"
+    case zoneDominance  // "You spent 65% of your session in Zone 4 (Hard)"
+    case zoneShift  // "Your Zone 4+5 time dropped from 45% to 30% this week"
     case volume  // Fallback
 }
 
@@ -116,6 +118,14 @@ struct DeterministicInsightGenerator {
         }
 
         if let insight = progressionInsight(from: result, context: filterContext) {
+            insights.append(insight)
+        }
+
+        if let insight = zoneDominanceInsight(from: result, allSessions: allSessions) {
+            insights.append(insight)
+        }
+
+        if let insight = zoneShiftInsight(from: result, allSessions: allSessions) {
             insights.append(insight)
         }
 
@@ -482,6 +492,82 @@ struct DeterministicInsightGenerator {
             category: .inactivity,
             text: text,
             icon: "clock.arrow.circlepath"
+        )
+    }
+
+    /// "You spent 65% of your session in Zone 4 (Hard)" — most recent session's dominant zone
+    private func zoneDominanceInsight(from result: AnalysisResult, allSessions: [SessionWithStats]) -> DeterministicInsight? {
+        // Find the most recent session with zone data
+        let latestDate = result.trendPoints.sorted { $0.date > $1.date }.first?.date
+        guard let date = latestDate,
+              let session = result.sessionMap[date],
+              let dist = session.zoneDistribution,
+              let dominant = dist.sortedByTimeSpent.first,
+              dominant.percentage > 0.20 else {
+            return nil
+        }
+
+        let pct = Int((dominant.percentage * 100).rounded())
+        let text = "You spent \(pct)% of your last session in \(dominant.zone.label) (\(dominant.zone.intensityLabel))"
+
+        return DeterministicInsight(
+            category: .zoneDominance,
+            text: text,
+            icon: "heart.text.clipboard"
+        )
+    }
+
+    /// "Your Zone 4+5 time dropped from 45% to 30% this week" — compare current vs previous period
+    private func zoneShiftInsight(from result: AnalysisResult, allSessions: [SessionWithStats]) -> DeterministicInsight? {
+        guard let previous = result.comparison.previous, previous.sessionCount > 0 else { return nil }
+
+        // Get current period sessions with zone data
+        let currentSessions = allSessions.filter { session in
+            result.trendPoints.contains { $0.date == session.session.startDate }
+        }.compactMap { $0.zoneDistribution }
+
+        guard !currentSessions.isEmpty else { return nil }
+
+        // Get previous period sessions with zone data
+        let prevSessions = allSessions.filter { session in
+            session.session.startDate >= previous.periodStart && session.session.startDate < previous.periodEnd
+        }.compactMap { $0.zoneDistribution }
+
+        guard !prevSessions.isEmpty else { return nil }
+
+        // Compute aggregate Zone 4+5 percentage for each period
+        func highZonePct(_ dists: [ZoneDistribution]) -> Double {
+            var z45Duration: TimeInterval = 0
+            var totalDuration: TimeInterval = 0
+            for dist in dists {
+                for entry in dist.entries {
+                    totalDuration += entry.duration
+                    if entry.zone == .zone4 || entry.zone == .zone5 {
+                        z45Duration += entry.duration
+                    }
+                }
+            }
+            return totalDuration > 0 ? z45Duration / totalDuration : 0
+        }
+
+        let currentZ45 = highZonePct(currentSessions)
+        let prevZ45 = highZonePct(prevSessions)
+
+        // Need at least 5% absolute change to be noteworthy
+        let delta = currentZ45 - prevZ45
+        guard abs(delta) >= 0.05 else { return nil }
+
+        let currentPct = Int((currentZ45 * 100).rounded())
+        let prevPct = Int((prevZ45 * 100).rounded())
+        let periodLabel = result.filters.period.previousLabel.lowercased()
+
+        let direction = delta < 0 ? "dropped" : "increased"
+        let text = "Your Zone 4+5 time \(direction) from \(prevPct)% to \(currentPct)% vs \(periodLabel)"
+
+        return DeterministicInsight(
+            category: .zoneShift,
+            text: text,
+            icon: delta < 0 ? "arrow.down.heart" : "arrow.up.heart"
         )
     }
 

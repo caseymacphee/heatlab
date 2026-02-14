@@ -25,7 +25,6 @@ struct InsightPreviewCard: View {
 
     // MARK: - AI Insight State
     @State private var aiInsights: [AIInsightCategory: AIInsight] = [:]  // Cache
-    @State private var applicableCategories: [AIInsightCategory] = []
     @State private var isLoadingAIInsight = false
 
     private let deterministicGenerator = DeterministicInsightGenerator()
@@ -123,9 +122,7 @@ struct InsightPreviewCard: View {
         }
         .onAppear {
             regenerateInsights()
-            updateApplicableCategories()
-            // Load first AI insight for Pro users
-            if useAIInsights && !applicableCategories.isEmpty {
+            if useAIInsights {
                 loadCurrentAIInsight()
             }
         }
@@ -138,16 +135,11 @@ struct InsightPreviewCard: View {
     }
 
     private func cycleInsight() {
-        if useAIInsights {
-            cycleAIInsight()
-        } else {
-            cycleDeterministicInsight()
-        }
-    }
-
-    private func cycleDeterministicInsight() {
         guard availableInsights.count > 1 else { return }
         currentInsightIndex = (currentInsightIndex + 1) % availableInsights.count
+        if useAIInsights {
+            loadCurrentAIInsight()
+        }
     }
 
     private func regenerateInsights() {
@@ -169,58 +161,46 @@ struct InsightPreviewCard: View {
         if currentInsightIndex >= availableInsights.count {
             currentInsightIndex = 0
         }
-
-        updateApplicableCategories()
     }
 
     // MARK: - AI Insight Helpers
 
-    /// Current AI insight for Pro users
-    private var currentAIInsight: AIInsight? {
-        guard !applicableCategories.isEmpty else { return nil }
-        let safeIndex = currentInsightIndex % applicableCategories.count
-        let category = applicableCategories[safeIndex]
-        return aiInsights[category]
+    /// Maps a deterministic InsightCategory to its AIInsightCategory equivalent, if one exists
+    private func aiCategory(for category: InsightCategory) -> AIInsightCategory? {
+        switch category {
+        case .recentComparison: return .recentComparison
+        case .temperatureAnalysis: return .temperatureAnalysis
+        case .sessionTypeComparison: return .sessionTypeComparison
+        case .periodOverPeriod: return .periodOverPeriod
+        case .progression: return .progression
+        case .acclimation: return .acclimation
+        case .peakSession, .hrConsistency, .inactivity, .volume, .zoneDominance, .zoneShift: return nil
+        }
     }
 
-    /// Update the list of applicable AI categories based on available deterministic insights
-    private func updateApplicableCategories() {
-        applicableCategories = availableInsights.compactMap { insight -> AIInsightCategory? in
-            switch insight.category {
-            case .recentComparison: return .recentComparison
-            case .temperatureAnalysis: return .temperatureAnalysis
-            case .sessionTypeComparison: return .sessionTypeComparison
-            case .periodOverPeriod: return .periodOverPeriod
-            case .progression: return .progression
-            case .acclimation: return .acclimation
-            case .peakSession, .hrConsistency, .inactivity, .volume: return nil
-            }
-        }
+    /// Current AI insight for Pro users (looked up via current deterministic insight)
+    private var currentAIInsight: AIInsight? {
+        guard let insight = currentInsight,
+              let category = aiCategory(for: insight.category) else { return nil }
+        return aiInsights[category]
     }
 
     /// Clear cached AI insights
     private func clearAICache() {
         aiInsights.removeAll()
-        if currentInsightIndex >= max(applicableCategories.count, 1) {
+        if currentInsightIndex >= max(availableInsights.count, 1) {
             currentInsightIndex = 0
         }
-        if useAIInsights && !applicableCategories.isEmpty {
+        if useAIInsights {
             loadCurrentAIInsight()
         }
     }
 
-    /// Cycle to next AI insight category
-    private func cycleAIInsight() {
-        guard applicableCategories.count > 1 else { return }
-        currentInsightIndex = (currentInsightIndex + 1) % applicableCategories.count
-        loadCurrentAIInsight()
-    }
-
     /// Load AI insight for current category if not cached
     private func loadCurrentAIInsight() {
-        guard let result = result, !applicableCategories.isEmpty else { return }
-        let safeIndex = currentInsightIndex % applicableCategories.count
-        let category = applicableCategories[safeIndex]
+        guard let result = result,
+              let insight = currentInsight,
+              let category = aiCategory(for: insight.category) else { return }
 
         // Already cached
         if aiInsights[category] != nil { return }
@@ -243,21 +223,19 @@ struct InsightPreviewCard: View {
                 )
             } catch {
                 // Fall back to deterministic insight
-                if let deterministicInsight = availableInsights.first(where: { $0.category == category.deterministicCategory }) {
-                    aiInsights[category] = AIInsight(
-                        category: category,
-                        text: deterministicInsight.text,
-                        isAIGenerated: false
-                    )
-                }
+                aiInsights[category] = AIInsight(
+                    category: category,
+                    text: insight.text,
+                    isAIGenerated: false
+                )
             }
             isLoadingAIInsight = false
         }
     }
 
-    /// Number of insights available for cycling
+    /// Number of insights available for cycling (always based on all available insights)
     private var insightCount: Int {
-        useAIInsights ? applicableCategories.count : availableInsights.count
+        availableInsights.count
     }
 
     private func displayText(from result: AnalysisResult) -> String {

@@ -13,6 +13,7 @@ struct SettingsView: View {
     @Environment(SubscriptionManager.self) var subscriptionManager
     @State private var showingAddTypeSheet = false
     @State private var showingPaywall = false
+    @State private var showingAgeSheet = false
     @State private var isRestoring = false
     
     /// Whether Apple Intelligence is available on this device
@@ -133,6 +134,41 @@ struct SettingsView: View {
                 Text("Some practitioners prefer to opt out of this exercise metrics.")
             }
             
+            // Heart Rate Zones Section
+            Section {
+                Button {
+                    showingAgeSheet = true
+                } label: {
+                    HStack {
+                        Text("Age")
+                        Spacer()
+                        if let age = settings.userAge {
+                            Text("\(age)")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("Not Set")
+                                .foregroundStyle(.tertiary)
+                        }
+                        Image(systemName: SFSymbol.chevronRight)
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+
+                if let maxHR = settings.estimatedMaxHR {
+                    HStack {
+                        Text("Estimated Max HR")
+                        Spacer()
+                        Text("\(Int(maxHR)) bpm")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Heart Rate Zones")
+            } footer: {
+                Text("Heart rate zones are calculated using the 220-age formula. Set your age to see zone breakdowns in session details.")
+            }
+
             // Session Types Section
             Section {
                 ForEach(settings.manageableSessionTypes) { typeConfig in
@@ -212,6 +248,10 @@ struct SettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingPaywall) {
             PaywallView()
+        }
+        .sheet(isPresented: $showingAgeSheet) {
+            AgeEntrySheet()
+                .presentationDetents([.large])
         }
         .sheet(isPresented: $showingAddTypeSheet) {
             AddCustomTypeSheet { name, workoutType in

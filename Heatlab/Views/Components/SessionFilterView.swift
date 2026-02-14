@@ -206,7 +206,7 @@ struct SessionFilterSheet: View {
         case .warm: return Color.HeatLab.tempWarm
         case .hot: return Color.HeatLab.tempHot
         case .veryHot: return Color.HeatLab.tempVeryHot
-        case .extreme: return Color.HeatLab.tempExtreme
+        case .hottest: return Color.HeatLab.tempExtreme
         }
     }
 }
@@ -300,7 +300,7 @@ struct ActiveFiltersBar: View {
         case .warm: return Color.HeatLab.tempWarm
         case .hot: return Color.HeatLab.tempHot
         case .veryHot: return Color.HeatLab.tempVeryHot
-        case .extreme: return Color.HeatLab.tempExtreme
+        case .hottest: return Color.HeatLab.tempExtreme
         }
     }
 }

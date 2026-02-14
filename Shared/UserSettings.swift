@@ -43,6 +43,30 @@ final class UserSettings {
         }
     }
     
+    // MARK: - Heart Rate Zone Settings
+
+    /// User's age for heart rate zone calculation
+    /// Returns nil when not set (stored as 0)
+    var userAge: Int? {
+        get {
+            access(keyPath: \.userAge)
+            let stored = UserDefaults.standard.integer(forKey: "userAge")
+            return stored > 0 ? stored : nil
+        }
+        set {
+            withMutation(keyPath: \.userAge) {
+                UserDefaults.standard.set(newValue ?? 0, forKey: "userAge")
+            }
+        }
+    }
+
+    /// Estimated max heart rate based on 220-age formula
+    /// Returns nil when age is not set
+    var estimatedMaxHR: Double? {
+        guard let age = userAge else { return nil }
+        return Double(220 - age)
+    }
+
     // MARK: - Calories Display Settings
     
     /// Whether to show calories burned in the iOS app (Dashboard, Session Detail, Session Row)
@@ -158,7 +182,8 @@ final class UserSettings {
             "showCaloriesInApp": showCaloriesInApp,
             "showCaloriesOnWatch": showCaloriesOnWatch,
             "temperatureUnit": temperatureUnit.rawValue,
-            "lastRoomTemperature": lastRoomTemperature
+            "lastRoomTemperature": lastRoomTemperature,
+            "userAge": userAge ?? 0
         ]
         
         if let configsData = try? JSONEncoder().encode(sessionTypeConfigs) {
@@ -186,6 +211,9 @@ final class UserSettings {
         if let configsData = dict["sessionTypeConfigs"] as? Data,
            let configs = try? JSONDecoder().decode([SessionTypeConfig].self, from: configsData) {
             self.sessionTypeConfigs = configs
+        }
+        if let age = dict["userAge"] as? Int, age > 0 {
+            self.userAge = age
         }
     }
     

@@ -219,14 +219,14 @@ enum TemperatureBucket: String, Codable, CaseIterable {
     case warm      // 80-89°F / 27-31°C
     case hot       // 90-99°F / 32-37°C
     case veryHot   // 100-104°F / 38-40°C
-    case extreme   // 105°F+ / 41°C+
+    case hottest   // 105°F+ / 41°C+
 
     static func from(temperature: Int) -> TemperatureBucket {
         switch temperature {
         case ..<90: return .warm
         case 90..<100: return .hot
         case 100..<105: return .veryHot
-        default: return .extreme
+        default: return .hottest
         }
     }
 
@@ -241,7 +241,7 @@ enum TemperatureBucket: String, Codable, CaseIterable {
             return unit == .fahrenheit ? "90-99°F" : "32-37°C"
         case .veryHot:
             return unit == .fahrenheit ? "100-104°F" : "38-40°C"
-        case .extreme:
+        case .hottest:
             return unit == .fahrenheit ? "105°F+" : "41°C+"
         }
     }

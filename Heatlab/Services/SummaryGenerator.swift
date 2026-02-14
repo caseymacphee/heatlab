@@ -18,18 +18,8 @@ final class SummaryGenerator {
     }
     
     /// Check if Apple Intelligence is available on this device
-    /// Returns false on simulators since AI models don't work there
     static var isAvailable: Bool {
-        // Check if running on simulator
-        #if targetEnvironment(simulator)
-        return false
-        #else
-        // Also check at runtime in case compile-time check doesn't catch it
-        if ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] != nil {
-            return false
-        }
-        return SystemLanguageModel.default.isAvailable
-        #endif
+        SystemLanguageModel.default.isAvailable
     }
     
     /// Generate a summary with basic context (backward compatible)
@@ -174,6 +164,21 @@ final class SummaryGenerator {
             }
         }
 
+        // Zone distribution context
+        var zoneContext = ""
+        if let zoneDist = sessionWithStats.zoneDistribution, !zoneDist.entries.isEmpty {
+            let zoneLines = zoneDist.sortedByTimeSpent.prefix(3).map { entry in
+                let pct = Int((entry.percentage * 100).rounded())
+                let mins = Int(entry.duration / 60)
+                return "\(entry.zone.label) (\(entry.zone.intensityLabel)): \(pct)% (\(mins)m)"
+            }
+            zoneContext = "\nZone Distribution: \(zoneLines.joined(separator: ", "))"
+            if let dominant = zoneDist.dominantZone {
+                zoneContext += "\nDominant Zone: \(dominant.label) (\(dominant.intensityLabel))"
+            }
+            zoneContext += "\nMax HR for Zones: \(Int(zoneDist.maxHR)) bpm"
+        }
+
         let sessionType = workoutSession.roomTemperature == nil ? "session" : "heated session"
 
         return """
@@ -186,7 +191,7 @@ final class SummaryGenerator {
         Max Heart Rate: \(Int(stats.maxHR)) bpm
         Min Heart Rate: \(stats.minHR > 0 ? "\(Int(stats.minHR)) bpm" : "N/A")
         Calories: \(Int(stats.calories))
-        Temperature Baseline Comparison: \(tempComparisonText)\(classComparisonText)\(notesContext)\(effortContext)\(otherTempBaselines)\(otherClassBaselines)
+        Temperature Baseline Comparison: \(tempComparisonText)\(classComparisonText)\(notesContext)\(effortContext)\(otherTempBaselines)\(otherClassBaselines)\(zoneContext)
 
         Guidelines:
         - Focus on meaningful observations from the data
@@ -194,6 +199,7 @@ final class SummaryGenerator {
         - If user notes mention how they felt, acknowledge that context
         - If perceived effort doesn't match HR data, gently note the discrepancy
         - Compare to other baselines only if it provides useful context
+        - If zone data available, comment on what the zone distribution reveals about session intensity
         - Be encouraging and fact-focused, not over-the-top positive
         - Keep it conversational and actionable
         """

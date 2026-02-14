@@ -34,10 +34,9 @@ struct AnalysisView: View {
     @State private var showingPaywall = false
     
     // Chart display state
-    @State private var showTrendLine: Bool = true
     @State private var selectedPoint: TrendPoint?
     @State private var selectedPointPosition: CGPoint = .zero
-    @State private var showingLegend = false
+    @State private var showZoneTrend = false
     
     private let calculator = AnalysisCalculator()
     private let trendCalculator = TrendCalculator()
@@ -225,27 +224,41 @@ struct AnalysisView: View {
 
     private func trendChartSection(result: AnalysisResult) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header with title and trend line icon toggle
+            // Header with title and chart mode toggle
             HStack(alignment: .firstTextBaseline) {
-                Text("Heart Rate")
+                Text(showZoneTrend ? "Heart Rate Zones" : "Avg. Heart Rate")
                     .font(.headline)
                 Spacer()
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        showTrendLine.toggle()
+
+                // Single toggle: switches between HR trend and zone distribution
+                if settings.userAge != nil {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showZoneTrend.toggle()
+                        }
+                    } label: {
+                        Image(systemName: showZoneTrend
+                              ? "chart.line.uptrend.xyaxis.circle"
+                              : "chart.bar")
+                            .font(.title3)
+                            .foregroundStyle(Color.hlAccent)
                     }
-                } label: {
-                    Image(systemName: showTrendLine ? "chart.line.uptrend.xyaxis.circle.fill" : "chart.line.uptrend.xyaxis.circle")
-                        .font(.title3)
-                        .foregroundStyle(showTrendLine ? Color.hlAccent : Color.hlMuted)
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(showZoneTrend ? "Show trend" : "Show zones")
+                    .accessibilityHint("Double tap to switch chart view")
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Trend line")
-                .accessibilityValue(showTrendLine ? "On" : "Off")
-                .accessibilityHint("Double tap to toggle trend line visibility")
             }
 
-            if result.trendPoints.isEmpty {
+            if showZoneTrend {
+                // Zone trend chart (stacked bars)
+                let zoneSessions = sessions.filter { session in
+                    result.trendPoints.contains { $0.date == session.session.startDate }
+                }.filter { $0.zoneDistribution != nil }
+
+                if !zoneSessions.isEmpty {
+                    ZoneTrendChartView(sessions: zoneSessions)
+                }
+            } else if result.trendPoints.isEmpty {
                 ContentUnavailableView(
                     "No Data for Period",
                     systemImage: SFSymbol.mindAndBody,
@@ -256,8 +269,8 @@ struct AnalysisView: View {
                 let ewmaPoints = trendCalculator.calculateEWMA(points: result.trendPoints, period: result.filters.period)
                 
                 Chart {
-                    // EWMA trend line (behind points, only when toggled on and enough data)
-                    if showTrendLine && !ewmaPoints.isEmpty {
+                    // EWMA trend line (behind points)
+                    if !ewmaPoints.isEmpty {
                         ForEach(ewmaPoints) { point in
                             LineMark(
                                 x: .value("Date", point.date),
@@ -279,7 +292,7 @@ struct AnalysisView: View {
                         .symbolSize(60)
                     }
                 }
-                .chartYAxisLabel("Avg HR")
+                .chartYAxisLabel("BPM")
                 .chartYScale(domain: yAxisDomain(for: result.trendPoints))
                 .chartXScale(domain: xAxisDomain(for: result.filters.period))
                 .chartXAxis {
@@ -345,22 +358,22 @@ struct AnalysisView: View {
                 .frame(height: 220)
                 .padding(.bottom, 4)
                 
-                // Temperature legend button
-                HStack {
-                    Spacer()
-                    Button { showingLegend = true } label: {
-                        Label("Temp Colors", systemImage: SFSymbol.thermometer)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                // Compact temperature color legend
+                HStack(spacing: 12) {
+                    ForEach(TemperatureBucket.allCases, id: \.self) { bucket in
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(tempLegendColor(bucket))
+                                .frame(width: 6, height: 6)
+                            Text(tempLegendLabel(bucket))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
         }
         .heatLabCard()
-        .sheet(isPresented: $showingLegend) {
-            TemperatureLegendSheet()
-                .presentationDetents([.medium])
-        }
     }
     
     /// Find the nearest TrendPoint to a tap location
@@ -535,6 +548,26 @@ struct AnalysisView: View {
     private func pointColor(for temperature: Int) -> Color {
         Color.HeatLab.temperature(fahrenheit: temperature)
     }
+
+    private func tempLegendColor(_ bucket: TemperatureBucket) -> Color {
+        switch bucket {
+        case .unheated: return Color.secondary
+        case .warm: return Color.HeatLab.tempWarm
+        case .hot: return Color.HeatLab.tempHot
+        case .veryHot: return Color.HeatLab.tempVeryHot
+        case .hottest: return Color.HeatLab.tempExtreme
+        }
+    }
+
+    private func tempLegendLabel(_ bucket: TemperatureBucket) -> String {
+        switch bucket {
+        case .unheated: return "None"
+        case .warm: return "Warm"
+        case .hot: return "Hot"
+        case .veryHot: return "Very Hot"
+        case .hottest: return "Hottest"
+        }
+    }
     
     private func formattedTemp(_ fahrenheit: Int) -> String {
         let temp = Temperature(fahrenheit: fahrenheit)
@@ -576,11 +609,8 @@ struct AnalysisView: View {
                 }
                 currentDate = nextDate
             }
-            if dates.last != end {
-                dates.append(end)
-            }
             return dates
-            
+
         case .threeMonth:
             // Show bi-weekly intervals for 3-month view
             var dates: [Date] = [start]
@@ -592,11 +622,8 @@ struct AnalysisView: View {
                 }
                 currentDate = nextDate
             }
-            if dates.last != end {
-                dates.append(end)
-            }
             return dates
-            
+
         case .year:
             // Show monthly intervals
             var dates: [Date] = [start]
@@ -607,9 +634,6 @@ struct AnalysisView: View {
                     dates.append(nextDate)
                 }
                 currentDate = nextDate
-            }
-            if dates.last != end {
-                dates.append(end)
             }
             return dates
         }
@@ -653,7 +677,7 @@ struct AnalysisView: View {
         // Fetch sessions based on selected period - avoid loading entire history
         // Each period needs current + previous for comparison
         let cutoffDate = periodCutoffDate(for: selectedPeriod)
-        sessions = (try? await repo.fetchSessionsWithStats(from: cutoffDate)) ?? []
+        sessions = (try? await repo.fetchSessionsWithStats(from: cutoffDate, maxHR: settings.estimatedMaxHR)) ?? []
 
         // DEBUG: Check session data
         print("📊 AnalysisView - Total sessions: \(totalSessionCount)")
@@ -811,68 +835,6 @@ private struct ChartCalloutView: View {
     }
 }
 
-// MARK: - Temperature Legend Sheet
-
-private struct TemperatureLegendSheet: View {
-    @Environment(\.dismiss) var dismiss
-    @Environment(UserSettings.self) var settings
-
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 20) {
-                Text("Point colors indicate the room temperature during your session.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal)
-
-                VStack(spacing: 0) {
-                    ForEach(TemperatureBucket.allCases, id: \.self) { bucket in
-                        HStack(spacing: 12) {
-                            Circle()
-                                .fill(colorForBucket(bucket))
-                                .frame(width: 16, height: 16)
-
-                            Text(bucket.displayName(for: settings.temperatureUnit))
-                                .font(.body)
-                            
-                            Spacer()
-                        }
-                        .padding(.horizontal)
-                        .padding(.vertical, 12)
-                        
-                        if bucket != TemperatureBucket.allCases.last {
-                            Divider()
-                                .padding(.leading, 40)
-                        }
-                    }
-                }
-                .background(Color.hlSurface)
-                .clipShape(RoundedRectangle(cornerRadius: HLRadius.card))
-                .padding(.horizontal)
-                
-                Spacer()
-            }
-            .padding(.top)
-            .navigationTitle("Temperature Colors")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
-            }
-        }
-    }
-    
-    private func colorForBucket(_ bucket: TemperatureBucket) -> Color {
-        switch bucket {
-        case .unheated: return Color.secondary
-        case .warm: return Color.HeatLab.tempWarm
-        case .hot: return Color.HeatLab.tempHot
-        case .veryHot: return Color.HeatLab.tempVeryHot
-        case .extreme: return Color.HeatLab.tempExtreme
-        }
-    }
-}
 
 #Preview {
     NavigationStack {
