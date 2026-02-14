@@ -2,8 +2,7 @@
 //  SessionInsightCard.swift
 //  heatlab
 //
-//  Unified insight card for SessionDetailView combining:
-//  - Baseline comparison (temperature + class type)
+//  Insight card for SessionDetailView combining:
 //  - AI insight (Pro) or upsell (Free)
 //  - Key stats row
 //
@@ -16,8 +15,6 @@ struct SessionInsightCard: View {
     @Environment(UserSettings.self) var settings
 
     let session: SessionWithStats
-    let temperatureComparison: BaselineComparison
-    let classTypeComparison: BaselineComparison?
     let isPro: Bool
     let aiInsight: String?
     let isGeneratingInsight: Bool
@@ -31,23 +28,14 @@ struct SessionInsightCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Baseline Section
-            baselineSection
-                .padding()
-
             // AI Section (only when platform supports AI)
-            // - Free users: show upsell
-            // - Pro users: show/generate AI content
             if aiAvailable {
-                Divider()
-                    .padding(.horizontal)
-
                 aiSection
                     .padding()
-            }
 
-            Divider()
-                .padding(.horizontal)
+                Divider()
+                    .padding(.horizontal)
+            }
 
             // Stats Row
             statsRow
@@ -55,75 +43,6 @@ struct SessionInsightCard: View {
         }
         .background(Color.hlSurface)
         .clipShape(RoundedRectangle(cornerRadius: HLRadius.card))
-    }
-
-    // MARK: - Baseline Section
-
-    private var baselineSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Temperature baseline
-            baselineRow(
-                icon: SFSymbol.thermometer,
-                text: temperatureComparisonText,
-                isInsufficient: isInsufficientData(temperatureComparison)
-            )
-
-            // Class type baseline (if available)
-            if let classComparison = classTypeComparison {
-                baselineRow(
-                    icon: settings.sessionType(for: session.session.sessionTypeId)?.icon ?? SFSymbol.yoga,
-                    text: classComparisonText(classComparison),
-                    isInsufficient: isInsufficientData(classComparison)
-                )
-            }
-        }
-    }
-
-    private func baselineRow(icon: String, text: String, isInsufficient: Bool) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .foregroundStyle(isInsufficient ? .secondary : Color.hlAccent)
-                .font(.body)
-                .frame(width: 24, alignment: .center)
-
-            Text(text)
-                .font(.subheadline)
-                .foregroundStyle(isInsufficient ? .secondary : .primary)
-        }
-    }
-
-    private func isInsufficientData(_ comparison: BaselineComparison) -> Bool {
-        if case .insufficientData = comparison {
-            return true
-        }
-        return false
-    }
-
-    private var temperatureComparisonText: String {
-        switch temperatureComparison {
-        case .typical(let bucket):
-            return bucket.isHeated ? "Typical avg HR for this temperature" : "Typical avg HR for unheated"
-        case .higherEffort(let percent, _):
-            return "\(Int(percent))% higher avg HR than usual for this temp"
-        case .lowerEffort(let percent, _):
-            return "\(Int(percent))% lower avg HR than usual for this temp"
-        case .insufficientData(let needed, _):
-            return "Need \(needed) more session\(needed == 1 ? "" : "s") at this temp for baseline"
-        }
-    }
-
-    private func classComparisonText(_ comparison: BaselineComparison) -> String {
-        let typeName = settings.sessionTypeName(for: session.session.sessionTypeId) ?? "this class type"
-        switch comparison {
-        case .typical:
-            return "Typical avg HR for \(typeName)"
-        case .higherEffort(let percent, _):
-            return "\(Int(percent))% higher avg HR than typical \(typeName)"
-        case .lowerEffort(let percent, _):
-            return "\(Int(percent))% lower avg HR than typical \(typeName)"
-        case .insufficientData(let needed, _):
-            return "Need \(needed) more \(typeName) session\(needed == 1 ? "" : "s") for baseline"
-        }
     }
 
     // MARK: - AI Section
@@ -319,8 +238,6 @@ struct SessionInsightCard: View {
             workout: nil,
             stats: SessionStats(averageHR: 142, maxHR: 168, minHR: 95, calories: 387, duration: 2732)
         ),
-        temperatureComparison: .lowerEffort(percentBelow: 8, bucket: .veryHot),
-        classTypeComparison: .typical(bucket: .veryHot),
         isPro: true,
         aiInsight: "Your heart rate of 142 bpm was 8% lower than your baseline for 100-104°F sessions. This indicates excellent heat adaptation.",
         isGeneratingInsight: false,
@@ -343,8 +260,6 @@ struct SessionInsightCard: View {
             workout: nil,
             stats: SessionStats(averageHR: 142, maxHR: 168, minHR: 95, calories: 387, duration: 2732)
         ),
-        temperatureComparison: .typical(bucket: .veryHot),
-        classTypeComparison: nil,
         isPro: true,
         aiInsight: nil,
         isGeneratingInsight: true,
@@ -367,8 +282,6 @@ struct SessionInsightCard: View {
             workout: nil,
             stats: SessionStats(averageHR: 142, maxHR: 168, minHR: 95, calories: 387, duration: 2732)
         ),
-        temperatureComparison: .higherEffort(percentAbove: 12, bucket: .veryHot),
-        classTypeComparison: .insufficientData(sessionsNeeded: 2, bucket: .veryHot),
         isPro: false,
         aiInsight: nil,
         isGeneratingInsight: false,
@@ -380,26 +293,3 @@ struct SessionInsightCard: View {
     .environment(UserSettings())
 }
 
-#Preview("Insufficient Data - Both Baselines") {
-    SessionInsightCard(
-        session: SessionWithStats(
-            session: {
-                let s = WorkoutSession(workoutUUID: UUID(), startDate: Date(), roomTemperature: 102)
-                s.sessionTypeId = SessionTypeConfig.DefaultTypeID.vinyasa
-                return s
-            }(),
-            workout: nil,
-            stats: SessionStats(averageHR: 142, maxHR: 168, minHR: 95, calories: 387, duration: 2732)
-        ),
-        temperatureComparison: .insufficientData(sessionsNeeded: 2, bucket: .veryHot),
-        classTypeComparison: .insufficientData(sessionsNeeded: 3, bucket: .veryHot),
-        isPro: true,
-        aiInsight: nil,
-        isGeneratingInsight: false,
-        onRefreshTap: {},
-        onUpgradeTap: {}
-    )
-    .padding()
-    .background(Color.hlBackground)
-    .environment(UserSettings())
-}

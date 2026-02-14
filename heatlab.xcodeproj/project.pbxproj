@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		482ABE17B5CB765EA3676084 /* PersonalRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 062D8CC7AA7AEB58731D7732 /* PersonalRecord.swift */; };
+		D1E591C4091632395D984CF6 /* StreakTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E04F360B86281786F735FE0E /* StreakTracker.swift */; };
+		5E96EBDB8999BA39362480A0 /* StreakTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E04F360B86281786F735FE0E /* StreakTracker.swift */; };
 		3C14822C2F40D9D100E32A4F /* HeartRateZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C14822B2F40D9D100E32A4F /* HeartRateZone.swift */; };
 		3C14822D2F40D9D100E32A4F /* HeartRateZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C14822B2F40D9D100E32A4F /* HeartRateZone.swift */; };
 		3C766A4D2F1400F100309D3D /* HeatLabWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 3C766A2D2F1400EF00309D3D /* HeatLabWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -92,6 +95,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		062D8CC7AA7AEB58731D7732 /* PersonalRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalRecord.swift; sourceTree = "<group>"; };
+		E04F360B86281786F735FE0E /* StreakTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakTracker.swift; sourceTree = "<group>"; };
 		3C14822B2F40D9D100E32A4F /* HeartRateZone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateZone.swift; sourceTree = "<group>"; };
 		3C7669FA2F14000900309D3D /* HeatLab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HeatLab.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3C766A0B2F14000B00309D3D /* HeatlabTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HeatlabTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -248,6 +253,7 @@
 		3C766B082F1520F400309D3D /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				062D8CC7AA7AEB58731D7732 /* PersonalRecord.swift */,
 				3C766B052F1520F400309D3D /* WorkoutSession.swift */,
 				3C766B062F1520F400309D3D /* SessionStats.swift */,
 				3C766B072F1520F400309D3D /* UserBaseline.swift */,
@@ -285,6 +291,7 @@
 		3C769D032F1F000100309D3D /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				E04F360B86281786F735FE0E /* StreakTracker.swift */,
 				3C769D002F1F000100309D3D /* SubscriptionManager.swift */,
 			);
 			path = Services;
@@ -541,6 +548,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				482ABE17B5CB765EA3676084 /* PersonalRecord.swift in Sources */,
+				D1E591C4091632395D984CF6 /* StreakTracker.swift in Sources */,
 				3C76993B2F1A9446000FAEAD /* SessionTypeConfig.swift in Sources */,
 				3C766B0D2F1520F400309D3D /* WorkoutSession.swift in Sources */,
 				3C766B0E2F1520F400309D3D /* UserSettings.swift in Sources */,
@@ -576,6 +585,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5E96EBDB8999BA39362480A0 /* StreakTracker.swift in Sources */,
 				3C766B132F1520F400309D3D /* WorkoutSession.swift in Sources */,
 				3C766B142F1520F400309D3D /* UserSettings.swift in Sources */,
 				3C766B152F1520F400309D3D /* UserBaseline.swift in Sources */,

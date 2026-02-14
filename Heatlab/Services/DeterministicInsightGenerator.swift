@@ -584,7 +584,7 @@ struct DeterministicInsightGenerator {
         return DeterministicInsight(
             category: .volume,
             text: text,
-            icon: "number"
+            icon: "figure.yoga"
         )
     }
 }

@@ -21,11 +21,12 @@ struct SessionConfirmationView: View {
     @State private var selectedEffort: PerceivedEffort = .moderate
     @State private var isSaving = false
     @State private var showSavedAnimation = false
+    @State private var savedSession: WorkoutSession?
     @Namespace private var temperatureDialNamespace
     
     let workout: HKWorkout
     let selectedSessionTypeId: UUID?  // Pre-selected in StartView
-    let onComplete: () -> Void
+    let onComplete: (WorkoutSession) -> Void
 
     /// Display name: session type name if selected, otherwise workout type in title case
     private var sessionTypeDisplayName: String {
@@ -152,9 +153,9 @@ struct SessionConfirmationView: View {
             temperatureInput = settings.lastRoomTemperature
         }
         .overlay {
-            if showSavedAnimation {
+            if showSavedAnimation, let saved = savedSession {
                 SavedAnimationOverlay {
-                    onComplete()
+                    onComplete(saved)
                 }
             }
         }
@@ -196,6 +197,9 @@ struct SessionConfirmationView: View {
             if isHeated {
                 settings.lastRoomTemperature = temperatureInput
             }
+
+            // Keep reference to saved session for summary screen
+            savedSession = session
 
             // Trigger background sync (fire and forget - don't block exit)
             Task {

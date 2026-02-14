@@ -29,6 +29,7 @@ struct DashboardView: View {
     @State private var showingWatchInstructions = false
     @State private var totalSessionCount: Int = 0  // For differentiating empty vs zero state
     @State private var mostRecentSessionDate: Date? = nil  // For inactivity insight
+    @State private var currentStreak: Int = 0
 
     private let analysisCalculator = AnalysisCalculator()
 
@@ -156,6 +157,9 @@ struct DashboardView: View {
                             lastSessionDate: mostRecentSessionDate,
                             onTap: { selectedTab = 1 }
                         )
+
+                        // MARK: - Streak Badge
+                        StreakBadgeView(streak: currentStreak)
 
                         // MARK: - Past 7 Days Stats
                         VStack(alignment: .leading, spacing: 12) {
@@ -329,6 +333,17 @@ struct DashboardView: View {
             mostRecentSessionDate = try? repo.fetchMostRecentSessionDate()
         } else {
             mostRecentSessionDate = nil
+        }
+
+        // Compute streak from all sessions (lightweight SwiftData query, no HealthKit)
+        if totalSessionCount > 0 {
+            let streakDescriptor = FetchDescriptor<WorkoutSession>(
+                predicate: #Predicate<WorkoutSession> { $0.deletedAt == nil }
+            )
+            let allSessions = (try? modelContext.fetch(streakDescriptor)) ?? []
+            currentStreak = StreakTracker.currentStreak(from: allSessions)
+        } else {
+            currentStreak = 0
         }
 
         // Dashboard shows "Past 7 Days" + comparison to previous 7 days, so we only need 14 days
